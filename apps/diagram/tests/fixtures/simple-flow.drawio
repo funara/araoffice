@@ -1,0 +1,25 @@
+<mxfile host="Electron" agent="ARAOffice" version="1.0.0" type="device">
+  <diagram id="page-1" name="Page-1">
+    <mxGraphModel dx="1422" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="2" value="Start" style="shape=ellipse;perimeter=ellipsePerimeter;fillColor=#e0f2fe;strokeColor=#0284c7;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="100" y="100" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="Process" style="shape=rectangle;rounded=1;arcSize=12;fillColor=#ffffff;strokeColor=#334155;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="280" y="100" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="End" style="shape=ellipse;perimeter=ellipsePerimeter;fillColor=#fee2e2;strokeColor=#dc2626;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="480" y="100" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="step 1" edge="1" parent="1" source="2" target="3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=2;endArrow=classic;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6" value="step 2" edge="1" parent="1" source="3" target="4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=2;endArrow=classic;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

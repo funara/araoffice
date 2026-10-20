@@ -1,0 +1,64 @@
+{
+  "name": "araoffice",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-native office suite (docs, sheets, slides, pdf)",
+  "author": {
+    "name": "Adhi Rahmadian",
+    "url": "https://adhirahmadian.id"
+  },
+  "license": "GPL-3.0-or-later",
+  "engines": {
+    "node": ">=22.12.0",
+    "npm": ">=10"
+  },
+  "volta": {
+    "node": "22.12.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "postinstall": "install-electron",
+    "format": "node tools/format-changed.mjs --write",
+    "format:check": "node tools/format-changed.mjs --check",
+    "lint": "eslint .",
+    "fixtures": "npm run fixtures -w @araoffice/docx-engine",
+    "test": "npm run test -w @araoffice/i18n && npm run test -w @araoffice/electron-utils && npm run test -w @araoffice/docx-engine && npm run test -w @araoffice/file-parse && npm run test -w @araoffice/pptx-engine && npm run test -w @araoffice/pptx-render && npm run test -w @araoffice/ai-search && npm run test -w @araoffice/agent-core && npm run test -w @araoffice/ai-provider && npm run test -w @araoffice/project-store && npm run test -w @araoffice/docs && npm run test -w @araoffice/sheets && npm run test -w @araoffice/shell && npm run test -w @araoffice/slides && npm run test -w @araoffice/pdf && npm run test -w @araoffice/markdown && npm run test -w @araoffice/diagram",
+    "typecheck": "npm run typecheck -w @araoffice/i18n && npm run typecheck -w @araoffice/electron-utils && npm run typecheck -w @araoffice/docx-engine && npm run typecheck -w @araoffice/file-parse && npm run typecheck -w @araoffice/pptx-engine && npm run typecheck -w @araoffice/pptx-render && npm run typecheck -w @araoffice/ai-search && npm run typecheck -w @araoffice/agent-core && npm run typecheck -w @araoffice/ai-provider && npm run typecheck -w @araoffice/project-store && npm run typecheck -w @araoffice/ui && npm run typecheck -w @araoffice/docs && npm run typecheck -w @araoffice/sheets && npm run typecheck -w @araoffice/shell && npm run typecheck -w @araoffice/slides && npm run typecheck -w @araoffice/pdf && npm run typecheck -w @araoffice/markdown && npm run typecheck -w @araoffice/diagram",
+    "dev": "concurrently -k -n docs,sheets,slides,pdf,markdown,diagram,shell -c blue,green,yellow,red,cyan,gray,magenta \"npm run dev:renderer -w @araoffice/docs\" \"npm run dev:renderer -w @araoffice/sheets\" \"npm run dev:renderer -w @araoffice/slides\" \"npm run dev:renderer -w @araoffice/pdf\" \"npm run dev:renderer -w @araoffice/markdown\" \"npm run dev:renderer -w @araoffice/diagram\" \"npm run dev -w @araoffice/shell\"",
+    "dev:docs-shell": "concurrently -k -n docs,shell -c blue,magenta \"npm run dev:renderer -w @araoffice/docs\" \"npm run dev -w @araoffice/shell\"",
+    "dev:docs": "npm run dev -w @araoffice/docs",
+    "build": "npm run build:all",
+    "build:docs": "npm run build -w @araoffice/docs",
+    "build:all": "npm run build -w @araoffice/docs && npm run build -w @araoffice/sheets && npm run build -w @araoffice/slides && npm run build -w @araoffice/pdf && npm run build -w @araoffice/markdown && npm run build -w @araoffice/diagram && npm run build -w @araoffice/shell",
+    "shell": "npm run build:all && electron apps/shell",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts",
+    "fidelity:docs": "node scripts/docs-word-fidelity.mjs",
+    "smoke:docs": "node scripts/docs-open-smoke.mjs",
+    "baseline:lo": "node scripts/pagination-baseline.mjs",
+    "baseline:word": "node scripts/pagination-baseline-word.mjs",
+    "fidelity:pptx": "node tools/fidelity-compare.mjs",
+    "notices": "node tools/gen-third-party-notices.mjs",
+    "licenses": "node tools/check-licenses.mjs",
+    "spill": "node tools/check-personal-spill.mjs",
+    "dist:mac": "npm run notices && npm run build:all && npm run dist:mac -w @araoffice/shell",
+    "dist:win": "npm run notices && npm run build:all && npm run dist:win -w @araoffice/shell",
+    "dist:linux": "npm run notices && npm run build:all && npm run dist:linux -w @araoffice/shell"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "@playwright/test": "^1.61.1",
+    "concurrently": "^9.2.4",
+    "eslint": "^10.8.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.8.0",
+    "pixelmatch": "^7.2.0",
+    "playwright-core": "^1.61.1",
+    "pngjs": "^7.0.0",
+    "prettier": "^3.9.6",
+    "typescript-eslint": "^8.65.0",
+    "ws": "^8.21.1"
+  }
+}

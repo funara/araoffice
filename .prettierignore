@@ -1,0 +1,10 @@
+node_modules/
+dist/
+out/
+release/
+.build/
+target/
+coverage/
+package-lock.json
+apps/*/build/
+apps/shell/build/THIRD-PARTY-NOTICES.txt

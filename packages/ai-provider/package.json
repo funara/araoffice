@@ -1,0 +1,24 @@
+{
+  "name": "@araoffice/ai-provider",
+  "version": "1.0.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "ARA model settings, streaming, chat, and authenticated metadata usage",
+  "exports": {
+    ".": "./src/index.ts",
+    "./providers": "./src/providers.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@araoffice/agent-core": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

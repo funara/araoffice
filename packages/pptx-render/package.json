@@ -1,0 +1,27 @@
+{
+  "name": "@araoffice/pptx-render",
+  "version": "1.0.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "pptx high-fidelity render layer: EMU->px coordinate system, data-driven RenderTree (shapes/pictures/fills/strokes + text layout via opentype.js metrics). Konva adapter is a thin layer on top.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./preset-geometry": "./src/preset-geometry.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@araoffice/pptx-engine": "*",
+    "bidi-js": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

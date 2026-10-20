@@ -1,0 +1,74 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build and distribution outputs
+dist/
+out/
+release/
+apps/shell/release/
+target/
+apps/sheets/native/xlsx-engine/target/
+
+# Local build artifacts
+*.asar
+*.asar.unpacked/
+*.dmg
+*.exe
+*.zip
+windows/
+apps/shell/build/THIRD-PARTY-NOTICES.txt
+apps/shell/build/packaged.env
+
+# Testing, fixtures & temporary files
+*.tmp
+*.temp
+*.log
+*.key
+.ruff_cache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+test-results/
+coverage/
+plan.md
+scratch/
+.task/
+probe*.mjs
+.refs/
+.example
+docs-archive/
+notes/
+MEMORY.md
+
+# Local environment & settings
+.env
+.env.local
+.env.*
+!.env.example
+electron-builder.env
+ai-settings.json
+app-settings.json
+recent-files.json
+
+# Operating System & IDE artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+.claude/
+.gemini/
+.commandcode/
+.kilo/
+.archify
+.cursor/rules/git-remote.mdc
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+~$*
+__pycache__/

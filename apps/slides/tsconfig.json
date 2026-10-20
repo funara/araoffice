@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    // Pin resolution to this repo's workspace sources (avoids stale types when node_modules links point elsewhere)
+    "baseUrl": ".",
+    "paths": {
+      "@araoffice/pptx-engine": ["../../packages/pptx-engine/src/index.ts"],
+      "@araoffice/pptx-engine/table-grid": ["../../packages/pptx-engine/src/table-grid.ts"],
+      "@araoffice/pptx-engine/smartart-layout": [
+        "../../packages/pptx-engine/src/smartart-layout.ts"
+      ],
+      "@araoffice/pptx-engine/background-promote": [
+        "../../packages/pptx-engine/src/background-promote.ts"
+      ],
+      "@araoffice/pptx-render": ["../../packages/pptx-render/src/index.ts"]
+    }
+  },
+  "include": ["src", "tests", "electron.vite.config.ts", "vitest.config.ts"]
+}

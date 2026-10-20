@@ -1,0 +1,1071 @@
+/* Chrome-style tab strip: tinted bar, white active tab with rounded top
+ * corners + concave "feet" merging into the content area below.
+ * Metrics copied from Chrome (macOS, light): 40px strip, 34px tabs that
+ * shrink from 240px but never stretch, "+" hugging the last tab. */
+.tab-bar {
+  --tabstrip-bg: #ebebeb;
+  --tabstrip-text: #454746;
+  --tabstrip-text-active: #1f1f1f;
+  --tab-separator: rgba(0, 0, 0, 0.22);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  display: flex;
+  align-items: stretch;
+  background: var(--tabstrip-bg);
+  -webkit-app-region: drag;
+  z-index: 10;
+}
+
+/* room for the macOS traffic lights (titleBarStyle: hiddenInset) and logo */
+.tab-bar-drag-spacer {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  padding-left: 12px;
+}
+
+.tab-home-floating {
+  position: absolute;
+  top: 0;
+  right: 1px;
+  z-index: 2;
+  height: 40px;
+  display: flex;
+  align-items: stretch;
+}
+
+.tab-item.tab-home.tab-home-placeholder {
+  width: 0;
+  min-width: 0;
+  flex: 0 0 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/* Home is rendered over the sidebar; this zero-size slot preserves tab indices
+ * for drag-to-reorder without taking space from document tabs. */
+
+.tab-brand-logo {
+  display: block;
+  width: 112px;
+  height: 28px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.tab-brand-logo-light {
+  display: none;
+}
+
+[data-theme='light'] .tab-brand-logo-dark {
+  display: none;
+}
+
+[data-theme='light'] .tab-brand-logo-light {
+  display: block;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .tab-brand-logo-dark {
+    display: none;
+  }
+
+  :root:not([data-theme='dark']) .tab-brand-logo-light {
+    display: block;
+  }
+}
+
+/* the right padding keeps the final tab's foot inside the scroll clip; the
+ * left edge is the shared sidebar boundary */
+.tab-strip {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 10px 0 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-item {
+  -webkit-app-region: no-drag;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* tab body is 34px tall and sits flush with the bar bottom; the 6px
+   * bottom padding centers content in the upper 28px band, on the same
+   * line as the hover capsule — measured from Chrome, whose favicons sit
+   * 3px above the tab's geometric center */
+  margin-top: 6px;
+  /* 12px left = 3px plate inset + 9px icon-to-plate, per Chrome @2x */
+  padding: 0 8px 6px 12px;
+  /* Chrome tabs shrink under pressure but never grow past 240px */
+  flex: 0 1 240px;
+  min-width: 104px;
+  border-radius: 10px 10px 0 0;
+  cursor: pointer;
+  color: var(--tabstrip-text);
+  font-size: 12.5px;
+  user-select: none;
+}
+
+/* Home carries the product name and is never closable, so it hugs its own
+ * content instead of sharing the document tabs' 240px flex basis — and it
+ * never shrinks, so "ARAOffice" stays whole however many tabs are open.
+ * The wider brand spacer keeps the active plate clear of the logo.
+ * ("tab-home", not "home" — home.css owns `.home` for the home page
+ * container living in this same document.) */
+.tab-item.tab-home {
+  flex: 0 0 auto;
+  min-width: 0;
+  /* 2px tighter icon-to-label gap than document tabs: the home glyph is an
+   * outline (no solid plate), so the default 8px reads too loose */
+  gap: 6px;
+  /* Keep the compact home plate balanced around its icon and label. */
+  padding-right: 20px;
+}
+
+/* thin separator between adjacent inactive tabs */
+.tab-item:not(.active):not(:first-child)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  /* centered on the content line (3px above tab center, like the icons) */
+  top: calc(50% - 3px);
+  width: 1px;
+  height: 16px;
+  transform: translateY(-50%);
+  background: var(--tab-separator);
+}
+
+/* separators vanish next to the active or hovered tab.
+ * `:not(.active)` on the right-hand side is load-bearing: an active tab's
+ * ::before is its left foot, not a separator — hiding it would cut the
+ * rounded corner whenever the hovered/dragged tab sits just before it */
+.tab-item:not(.active):hover::before,
+.tab-item:hover + .tab-item:not(.active)::before,
+.tab-item.active + .tab-item:not(.active)::before,
+.tab-item.drag-source + .tab-item:not(.active)::before {
+  opacity: 0;
+}
+
+/* trailing separator between the last tab and the "+" button, centered in
+ * their 4px gap; same vanishing rules as the inter-tab separators */
+.tab-new-btn::before {
+  content: '';
+  position: absolute;
+  left: -2.5px;
+  top: 50%;
+  width: 1px;
+  height: 16px;
+  transform: translateY(-50%);
+  background: var(--tab-separator);
+}
+
+.tab-item.active + .tab-new-btn::before,
+.tab-item:hover + .tab-new-btn::before,
+.tab-item.drag-source + .tab-new-btn::before,
+.tab-new-btn:hover::before {
+  opacity: 0;
+}
+
+/* The highlight "plate" — one element serves both states so hover and
+ * active share the exact same left/right edges (measured from Chrome:
+ * icon 18px@2x and × 30px@2x from the plate edges in BOTH states, and
+ * every plate is inset ~3px from its tab box, giving adjacent plates
+ * their constant 6px separation). Activating a hovered tab must not
+ * change the plate's width — only its height/shape. */
+.tab-plate {
+  position: absolute;
+  /* hover shape: flush with the tab top, 28px tall, 9px radius */
+  inset: 0 3px 6px;
+  border-radius: 9px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.tab-item:not(.active):hover .tab-plate {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.tab-item.active {
+  color: var(--tabstrip-text-active);
+  z-index: 1;
+}
+
+/* active shape: same side edges, full height, top corners only */
+.tab-item.active .tab-plate {
+  inset: 0 3px;
+  border-radius: 10px 10px 0 0;
+  background: var(--surface);
+}
+
+/* concave feet joining the active plate to the white content area below */
+.tab-item.active .tab-plate::before,
+.tab-item.active .tab-plate::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+}
+
+.tab-item.active .tab-plate::before {
+  left: -10px;
+  background: radial-gradient(circle at 0 0, transparent 9.5px, var(--surface) 10px);
+}
+.tab-home-floating .tab-item.active .tab-plate::before {
+  display: none;
+}
+
+.tab-item.active .tab-plate::after {
+  right: -10px;
+  background: radial-gradient(circle at 100% 0, transparent 9.5px, var(--surface) 10px);
+}
+
+/* mid drag-to-reorder: the dragged tab's plate carries a lift shadow */
+.tab-item.drag-source .tab-plate {
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
+}
+
+/* ---- drag-to-reorder (Chrome-style: the grabbed tab follows the pointer, neighbours slide aside) ---- */
+
+.tab-strip.dragging .tab-item {
+  transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-strip.dragging .tab-item.drag-source {
+  transition: none;
+  z-index: 2;
+}
+
+.tab-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.tab-title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-close {
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: -4px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tab-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* "+" new tab button: lives inside the strip so it hugs the last tab, Chrome-style */
+.tab-new-btn {
+  margin-left: 4px;
+}
+.tab-strip-home-only .tab-new-btn {
+  position: absolute;
+  top: 6px;
+  left: 12px;
+  margin-left: 0;
+}
+
+.tab-overflow-btn {
+  margin: 0 8px 0 2px;
+}
+
+/* new-tab control lives in the tab strip */
+.tab-new-btn {
+  -webkit-app-region: no-drag;
+  position: relative;
+  flex-shrink: 0;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--tabstrip-text);
+  cursor: pointer;
+}
+
+.tab-new-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.tab-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  height: 100%;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-right: 0;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+
+.tab-actions:not(:has(.window-controls)) {
+  padding-right: 10px;
+}
+
+.tab-search-btn {
+  -webkit-app-region: no-drag;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: 0 7px 0 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent, #2367ec) 26%, transparent);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--tabstrip-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme='light'] .tab-search-btn {
+  background: rgba(0, 0, 0, 0.035);
+  border-color: color-mix(in srgb, var(--accent, #2367ec) 30%, transparent);
+  color: #52525b;
+}
+
+.tab-search-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: color-mix(in srgb, var(--accent, #2367ec) 60%, transparent);
+  color: var(--tabstrip-text-active);
+}
+
+[data-theme='light'] .tab-search-btn:hover {
+  background: color-mix(in srgb, var(--accent, #2367ec) 7%, transparent);
+  border-color: color-mix(in srgb, var(--accent, #2367ec) 48%, transparent);
+  color: #18181b;
+}
+
+.tab-search-ai-icon {
+  color: var(--accent, #2367ec);
+  flex-shrink: 0;
+  transition:
+    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.15s ease;
+}
+
+.tab-search-btn:hover .tab-search-ai-icon {
+  transform: scale(1.12);
+}
+
+[data-theme='light'] .tab-search-ai-icon {
+  color: var(--accent, #2367ec);
+}
+
+[data-theme='light'] .tab-search-btn:hover .tab-search-ai-icon {
+  color: var(--accent-hover, #1b58cf);
+}
+
+.tab-search-label {
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    opacity 0.26s ease,
+    transform 0.26s ease;
+  display: inline-block;
+}
+
+.tab-search-label.is-fading {
+  opacity: 0;
+  transform: translateY(-2px);
+}
+
+.tab-search-kbd {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.55);
+  margin-left: 2px;
+  line-height: 14px;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+[data-theme='light'] .tab-search-kbd {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.tab-search-btn:hover .tab-search-kbd {
+  background: color-mix(in srgb, var(--accent, #2367ec) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent, #2367ec) 35%, transparent);
+  color: var(--tabstrip-text-active);
+}
+
+[data-theme='light'] .tab-search-btn:hover .tab-search-kbd {
+  background: color-mix(in srgb, var(--accent, #2367ec) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent, #2367ec) 28%, transparent);
+  color: var(--accent-hover, #1b58cf);
+}
+
+.tab-theme-btn {
+  -webkit-app-region: no-drag;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--tabstrip-text);
+  font: inherit;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme='light'] .tab-theme-btn {
+  background: rgba(0, 0, 0, 0.035);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #52525b;
+}
+
+.tab-theme-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: var(--tabstrip-text-active);
+}
+
+[data-theme='light'] .tab-theme-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.14);
+  color: #18181b;
+}
+
+.window-controls {
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+  height: 100%;
+  margin-left: 6px;
+  border-left: 1px solid var(--tab-separator);
+}
+
+.window-control {
+  -webkit-app-region: no-drag;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  min-width: 46px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--tabstrip-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.window-control:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='dark'] .window-control:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.window-control-close:hover {
+  background: #c42b1c !important;
+  color: #fff !important;
+}
+
+.window-control-close:active {
+  background: #b22517 !important;
+  color: #fff !important;
+}
+
+.tab-action-btn:focus-visible,
+.window-control:focus-visible,
+.topbar-popover button:focus-visible,
+.topbar-popover input:focus-visible,
+.topbar-popover select:focus-visible {
+  outline: 2px solid #2367ec;
+  outline-offset: -2px;
+}
+
+.window-glyph {
+  position: relative;
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.window-glyph-minimize::before {
+  content: '';
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 2px;
+  height: 1px;
+  background: currentColor;
+}
+
+.window-glyph-maximize {
+  border: 1px solid currentColor;
+  border-radius: 1px;
+}
+
+.window-glyph-restore::before,
+.window-glyph-restore::after {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+}
+
+.window-glyph-restore::before {
+  left: 0;
+  top: 3px;
+}
+
+.window-glyph-restore::after {
+  right: 0;
+  top: 0;
+  background: var(--tabstrip-bg);
+}
+
+.window-glyph-close::before,
+.window-glyph-close::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: -1px;
+  width: 1px;
+  height: 14px;
+  background: currentColor;
+}
+
+.window-glyph-close::before {
+  transform: rotate(45deg);
+}
+
+.window-glyph-close::after {
+  transform: rotate(-45deg);
+}
+
+.topbar-popover {
+  position: absolute;
+  top: 44px;
+  right: 8px;
+  z-index: 50;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 24%);
+  -webkit-app-region: no-drag;
+}
+
+.home-popover-anchor .topbar-popover {
+  top: calc(100% + 16px);
+  right: 0;
+  z-index: 60;
+}
+
+.topbar-popover h2 {
+  margin: 0 0 10px;
+  font-size: 17px;
+}
+
+.topbar-popover p {
+  margin: 6px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.topbar-popover-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.topbar-popover-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.topbar-popover-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.topbar-popover-links {
+  display: grid;
+  gap: 4px;
+  margin-top: 14px;
+}
+
+.topbar-popover-links button {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.topbar-popover-links button:hover {
+  background: var(--bg-hover);
+}
+
+.ai-popover {
+  display: grid;
+  gap: 16px;
+  box-sizing: border-box;
+  width: min(500px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 22px;
+  border-radius: 18px;
+}
+
+.ai-popover-heading {
+  display: grid;
+  gap: 6px;
+  padding-right: 28px;
+}
+
+.ai-popover-heading h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 23px;
+  letter-spacing: -0.02em;
+}
+
+.ai-popover-heading p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ai-popover-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ai-popover-spark {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.ai-model-catalog {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-model-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-model-info-label {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ai-model-list {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-model-card {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 8%);
+}
+
+.ai-model-card-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 3px;
+}
+
+.ai-model-card-heading > div {
+  display: contents;
+}
+
+.ai-model-card strong {
+  grid-column: 1;
+  grid-row: 1;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.ai-model-card-heading div > span {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.ai-model-card-badge {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.ai-model-card-badge {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ai-model-card-best {
+  display: flex;
+  gap: 5px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.ai-model-card-best b {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.ai-model-capabilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-model-capabilities li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.ai-model-capability-icon {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.ai-popover-note {
+  margin: 0;
+  padding-top: 2px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.ai-toc-details {
+  margin-top: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-subtle);
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.ai-toc-details[open] {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.ai-toc-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.ai-toc-summary::-webkit-details-marker {
+  display: none;
+}
+
+.ai-toc-summary:hover {
+  color: var(--text-primary);
+  background: var(--surface);
+}
+
+.ai-toc-summary-icon {
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.ai-toc-chevron {
+  margin-left: auto;
+  color: var(--text-secondary);
+  transition: transform 0.2s ease;
+}
+
+.ai-toc-details[open] .ai-toc-chevron {
+  transform: rotate(180deg);
+}
+
+.ai-toc-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.ai-toc-point {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ai-toc-point strong {
+  font-size: 11.5px;
+  color: var(--text-primary);
+}
+
+.ai-toc-status-agreed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, #10b981 12%, transparent);
+  color: #10b981;
+  font-size: 11px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.ai-toc-accept-btn {
+  margin-top: 4px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.ai-toc-accept-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 560px) {
+  .ai-popover {
+    width: calc(100vw - 24px);
+    padding: 18px;
+  }
+
+  .ai-model-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .ai-model-card-heading {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+[data-theme='dark'] .topbar-popover {
+  color: var(--text-primary);
+}
+
+.app-frame-content {
+  padding-top: 40px;
+}
+
+.app-frame-snapshot {
+  position: fixed;
+  top: 40px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-size: 100% 100%;
+  background-position: top left;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Dark mode tab bar overrides ─────────────────────────── */
+
+[data-theme='dark'] .tab-bar {
+  --tabstrip-bg: #2a2a2a;
+  --tabstrip-text: #b0b0b0;
+  --tabstrip-text-active: #e4e4e4;
+  --tab-separator: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme='dark'] .tab-item.active .tab-plate {
+  background: var(--surface);
+}
+
+[data-theme='dark'] .tab-item:not(.active):hover .tab-plate {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .tab-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme='dark'] .tab-new-btn:hover,
+[data-theme='dark'] .tab-overflow-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-strip.dragging .tab-item,
+  .tab-strip.dragging .tab-item.drag-source,
+  .tab-search-label,
+  .tab-search-btn,
+  .tab-search-ai-icon,
+  .tab-theme-btn,
+  .tab-close {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* System dark: same overrides when following OS preference */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) .tab-bar {
+    --tabstrip-bg: #2a2a2a;
+    --tabstrip-text: #b0b0b0;
+    --tabstrip-text-active: #e4e4e4;
+    --tab-separator: rgba(255, 255, 255, 0.15);
+  }
+  :root:not([data-theme='light']):not([data-theme='dark']) .tab-item.active .tab-plate {
+    background: var(--surface);
+  }
+  :root:not([data-theme='light']):not([data-theme='dark']) .tab-item:not(.active):hover .tab-plate {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  :root:not([data-theme='light']):not([data-theme='dark']) .tab-close:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+  :root:not([data-theme='light']):not([data-theme='dark']) .tab-new-btn:hover,
+  :root:not([data-theme='light']):not([data-theme='dark']) .tab-overflow-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
