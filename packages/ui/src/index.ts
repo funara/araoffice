@@ -1,6 +1,12 @@
 export { AiComposer } from './AiComposer'
 export { ErrorBoundary, type ErrorBoundaryProps } from './ErrorBoundary'
 export { AiPanelHeader, type AiPanelHeaderProps } from './AiPanelHeader'
+export {
+  AiWelcomeHub,
+  type AiWelcomeHubProps,
+  type QuickActionCard,
+  type ContextBadge,
+} from './AiWelcomeHub'
 export { AiPanelShell, type AiPanelShellProps } from './AiPanelShell'
 export {
   clampAiPanelWidth,
@@ -41,6 +47,7 @@ export {
   AraSpark,
   IconArrowUp,
   IconAttach,
+  IconBulb,
   IconCheck,
   IconChevronDown,
   IconChevronRight,
@@ -48,10 +55,13 @@ export {
   IconCopy,
   IconEnter,
   IconExternalLink,
+  IconFileText,
   IconJump,
   IconNewChat,
+  IconPen,
   IconRefresh,
   IconSend,
+  IconSettings,
   IconSidebarCollapse,
   IconSidebarCollapseLeft,
   IconSparkles,

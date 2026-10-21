@@ -13,7 +13,7 @@ import fileImageIcon from '../assets/file-image.png'
 import { CONTINUE_INSTRUCTION } from '@araoffice/agent-core'
 import { createFilesSkill } from './files-skill'
 import { createElectronTransport } from './transport'
-import { useI18n, t as tModule, aiLangDirective, type StringKey } from '../i18n/locale'
+import { useI18n, t as tModule, aiLangDirective } from '../i18n/locale'
 import {
   AiComposer,
   AraSpark,
@@ -23,11 +23,16 @@ import {
   AiSnapshotsPopover,
   AiTypingIndicator,
   AiUnconfiguredCard,
+  AiWelcomeHub,
   Markdown,
   extractThinking,
   IconAttach,
+  IconBulb,
+  IconFileText,
   IconNewChat,
+  IconPen,
   IconSidebarCollapse,
+  IconSparkles,
   openExternalUrl,
   useAiPanelWidth,
   useAiReady,
@@ -79,19 +84,6 @@ interface ChatEntry {
   tools?: ToolActivity[]
   attachments?: AttachmentMeta[]
 }
-
-/** clickable starter prompts for the empty state (fill the input, do not send) —
- * blank documents get generation starters, documents with content get edit starters */
-const DRAFT_STARTER_PROMPTS: StringKey[] = [
-  'aiStarterWeeklyReport',
-  'aiStarterLaunchPost',
-  'aiStarterEventOutline',
-]
-const EDIT_STARTER_PROMPTS: StringKey[] = [
-  'aiStarterSummarize',
-  'aiStarterPolishAll',
-  'aiStarterContinue',
-]
 
 /** resizable panel width: persisted, clamped so neither pane collapses */
 const PANEL_WIDTH_KEY = 'docs-ai-panel-width'
@@ -770,6 +762,12 @@ export function AiPanel({
     )
   }
 
+  const docText = editor?.state?.doc?.textContent?.trim() ?? ''
+  const wordCount = docText ? docText.split(/\s+/).filter(Boolean).length : 0
+  const fileName = filePath
+    ? filePath.replace(/\\/g, '/').split('/').pop() || t('aiDocUntitled')
+    : t('aiDocUntitled')
+
   return (
     <AiPanelShell
       ref={asideRef}
@@ -855,30 +853,87 @@ export function AiPanel({
         {chat.length === 0 && historicChat.length === 0 && (
           <div className="ai-chat-empty">
             {isReady ? (
-              <>
-                <div className="ai-chat-empty-title">
-                  {t(docEmpty ? 'aiEmptyDraftTitle' : 'aiEmptyTitle')}
-                </div>
-                <div className="ai-chat-empty-body">
-                  {t(docEmpty ? 'aiEmptyDraftBody1' : 'aiEmptyBody1')}
-                  <br />
-                  {t(docEmpty ? 'aiEmptyDraftBody2' : 'aiEmptyBody2')}
-                </div>
-                <div className="ai-starter-list">
-                  {(docEmpty ? DRAFT_STARTER_PROMPTS : EDIT_STARTER_PROMPTS).map((p) => (
-                    <button
-                      key={p}
-                      className="ai-starter"
-                      onClick={() => {
-                        setInput(t(p))
-                        inputRef.current?.focus()
-                      }}
-                    >
-                      {t(p)}
-                    </button>
-                  ))}
-                </div>
-              </>
+              <AiWelcomeHub
+                description={
+                  docEmpty
+                    ? `${t('aiEmptyDraftBody1')} ${t('aiEmptyDraftBody2')}`
+                    : `${t('aiEmptyBody1')} ${t('aiEmptyBody2')}`
+                }
+                contextBadge={{
+                  icon: <IconFileText size={12} />,
+                  label: docEmpty
+                    ? `${fileName} · ${t('aiDocBlank')}`
+                    : `${fileName} · ${t('aiDocWords', { count: wordCount })}`,
+                  title: filePath ?? fileName,
+                }}
+                cards={
+                  docEmpty
+                    ? [
+                        {
+                          id: 'weekly-report',
+                          icon: <IconFileText size={16} />,
+                          title: t('aiStarterWeeklyReport'),
+                          subtitle: t('aiStarterWeeklyReportSub'),
+                          onClick: () => {
+                            setInput(t('aiStarterWeeklyReport'))
+                            inputRef.current?.focus()
+                          },
+                        },
+                        {
+                          id: 'launch-post',
+                          icon: <IconSparkles size={16} />,
+                          title: t('aiStarterLaunchPost'),
+                          subtitle: t('aiStarterLaunchPostSub'),
+                          onClick: () => {
+                            setInput(t('aiStarterLaunchPost'))
+                            inputRef.current?.focus()
+                          },
+                        },
+                        {
+                          id: 'event-outline',
+                          icon: <IconBulb size={16} />,
+                          title: t('aiStarterEventOutline'),
+                          subtitle: t('aiStarterEventOutlineSub'),
+                          onClick: () => {
+                            setInput(t('aiStarterEventOutline'))
+                            inputRef.current?.focus()
+                          },
+                        },
+                      ]
+                    : [
+                        {
+                          id: 'summarize',
+                          icon: <IconFileText size={16} />,
+                          title: t('aiStarterSummarize'),
+                          subtitle: t('aiStarterSummarizeSub'),
+                          onClick: () => {
+                            setInput(t('aiStarterSummarize'))
+                            inputRef.current?.focus()
+                          },
+                        },
+                        {
+                          id: 'polish',
+                          icon: <IconPen size={16} />,
+                          title: t('aiStarterPolishAll'),
+                          subtitle: t('aiStarterPolishAllSub'),
+                          onClick: () => {
+                            setInput(t('aiStarterPolishAll'))
+                            inputRef.current?.focus()
+                          },
+                        },
+                        {
+                          id: 'continue',
+                          icon: <IconSparkles size={16} />,
+                          title: t('aiStarterContinue'),
+                          subtitle: t('aiStarterContinueSub'),
+                          onClick: () => {
+                            setInput(t('aiStarterContinue'))
+                            inputRef.current?.focus()
+                          },
+                        },
+                      ]
+                }
+              />
             ) : (
               <AiUnconfiguredCard onConfigure={() => void window.desktop?.configureAi?.()} />
             )}
@@ -1039,6 +1094,7 @@ export function AiPanel({
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         <AiComposer
           disabled={!isReady}
+          disclaimer={t('aiAdvisoryDisclaimer')}
           header={
             attachments.length > 0 && (
               <div className="ai-attachments" onScroll={onAttachmentsScroll}>

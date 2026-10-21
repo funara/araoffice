@@ -10,12 +10,16 @@ import {
   AiSnapshotsPopover,
   AiTypingIndicator,
   AiUnconfiguredCard,
+  AiWelcomeHub,
   extractThinking,
   IconCheck,
   IconCopy,
+  IconFileText,
   IconNewChat,
+  IconPen,
   IconRefresh,
   IconSidebarCollapse,
+  IconSparkles,
   Markdown,
   useAiPanelWidth,
   useAiReady,
@@ -481,42 +485,57 @@ export function AiPanel({
         {chat.length === 0 && (
           <div className="ai-chat-empty">
             {isReady ? (
-              <>
-                <div className="ai-chat-empty-title">{t('aiEmptyTitle')}</div>
-                <div className="ai-chat-empty-body">{t('aiEmptyBody')}</div>
-                <div className="ai-starter-list">
-                  <button
-                    type="button"
-                    className="ai-starter"
-                    onClick={() => {
-                      setPrompt(t('aiQuickResearchPrompt'))
-                      inputRef.current?.focus()
+              (() => {
+                const mdText = deps.getSnapshot()?.trim() ?? ''
+                const docEmpty = !mdText
+                const fileName = filePath
+                  ? filePath.replace(/\\/g, '/').split('/').pop() || 'Untitled.md'
+                  : 'Untitled.md'
+                return (
+                  <AiWelcomeHub
+                    description={t('aiEmptyBody')}
+                    contextBadge={{
+                      icon: <IconFileText size={12} />,
+                      label: docEmpty
+                        ? `${fileName} · Blank`
+                        : `${fileName} · ${mdText.split(/\s+/).filter(Boolean).length} words`,
+                      title: filePath ?? fileName,
                     }}
-                  >
-                    {t('aiQuickResearch')}
-                  </button>
-                  <button
-                    type="button"
-                    className="ai-starter"
-                    onClick={() => {
-                      setPrompt(t('aiQuickDraftPrompt'))
-                      inputRef.current?.focus()
-                    }}
-                  >
-                    {t('aiQuickDraft')}
-                  </button>
-                  <button
-                    type="button"
-                    className="ai-starter"
-                    onClick={() => {
-                      setPrompt(t('aiQuickPolishPrompt'))
-                      inputRef.current?.focus()
-                    }}
-                  >
-                    {t('aiQuickPolish')}
-                  </button>
-                </div>
-              </>
+                    cards={[
+                      {
+                        id: 'md-research',
+                        icon: <IconSparkles size={16} />,
+                        title: t('aiQuickResearch'),
+                        subtitle: t('aiQuickResearchPrompt'),
+                        onClick: () => {
+                          setPrompt(t('aiQuickResearchPrompt'))
+                          inputRef.current?.focus()
+                        },
+                      },
+                      {
+                        id: 'md-draft',
+                        icon: <IconFileText size={16} />,
+                        title: t('aiQuickDraft'),
+                        subtitle: t('aiQuickDraftPrompt'),
+                        onClick: () => {
+                          setPrompt(t('aiQuickDraftPrompt'))
+                          inputRef.current?.focus()
+                        },
+                      },
+                      {
+                        id: 'md-polish',
+                        icon: <IconPen size={16} />,
+                        title: t('aiQuickPolish'),
+                        subtitle: t('aiQuickPolishPrompt'),
+                        onClick: () => {
+                          setPrompt(t('aiQuickPolishPrompt'))
+                          inputRef.current?.focus()
+                        },
+                      },
+                    ]}
+                  />
+                )
+              })()
             ) : (
               <AiUnconfiguredCard onConfigure={() => void window.markdownApi?.configureAi?.()} />
             )}
@@ -617,6 +636,7 @@ export function AiPanel({
         <AiComposer
           authGate={undefined}
           disabled={!isReady}
+          disclaimer="ARA Assistant suggestions are advisory, it can make mistakes."
           value={prompt}
           busy={busy}
           ariaLabel={t('aiComposerPlaceholder')}

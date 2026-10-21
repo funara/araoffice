@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type {
   HomeApi,
   ProjectHomeApi,
@@ -552,6 +552,7 @@ export function Home({
   const [activeAiProvider, setActiveAiProvider] = useState<AiProviderId>('google')
   const [activeModel, setActiveModel] = useState('')
   const [isFetchingActiveModel, setIsFetchingActiveModel] = useState(false)
+  const [isAiConnected, setIsAiConnected] = useState(false)
 
   const [aiMenuOpen, setAiMenuOpen] = useState(false)
   const [aiChoice, setAiChoice] = useState<AiProviderId>('google')
@@ -566,11 +567,34 @@ export function Home({
   const [aiMenuError, setAiMenuError] = useState('')
   const [availableModels, setAvailableModels] = useState<string[]>([])
   const [isFetchingModels, setIsFetchingModels] = useState(false)
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false)
+  const [modelFilter, setModelFilter] = useState('')
+  const modelComboboxRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!modelDropdownOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (modelComboboxRef.current && !modelComboboxRef.current.contains(e.target as Node)) {
+        setModelDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [modelDropdownOpen])
+
+  const filteredModels = useMemo(() => {
+    if (!modelFilter.trim()) return availableModels
+    const q = modelFilter.toLowerCase().trim()
+    return availableModels.filter((m) => m.toLowerCase().includes(q))
+  }, [availableModels, modelFilter])
 
   const loadAiProviderStatus = useCallback(async () => {
     try {
       const settings = await window.aiOfficeAi?.getSettings()
-      if (!settings) return
+      if (!settings) {
+        setIsAiConnected(false)
+        return
+      }
       const provider = settings.provider === 'custom' ? 'custom' : 'google'
       setActiveAiProvider(provider)
       const configuredModel =
@@ -580,30 +604,50 @@ export function Home({
         )?.trim() ?? ''
       setActiveModel(configuredModel)
 
-      if (provider === 'custom' && settings.providers.custom?.baseUrl) {
-        setIsFetchingActiveModel(true)
-        try {
-          const res = await window.aiOfficeAi?.fetchCustomModels?.()
-          if (res?.ok && Array.isArray(res.models) && res.models.length > 0) {
-            setAvailableModels(res.models)
-            if (!configuredModel) setActiveModel(res.models[0])
+      if (provider === 'custom') {
+        const customUrl = settings.providers.custom?.baseUrl?.trim()
+        if (!customUrl) {
+          setIsAiConnected(false)
+        } else {
+          setIsFetchingActiveModel(true)
+          try {
+            const res = await window.aiOfficeAi?.fetchCustomModels?.()
+            if (res?.ok && Array.isArray(res.models) && res.models.length > 0) {
+              setAvailableModels(res.models)
+              if (!configuredModel) setActiveModel(res.models[0])
+              setIsAiConnected(true)
+            } else {
+              setIsAiConnected(false)
+            }
+          } catch {
+            setIsAiConnected(false)
+          } finally {
+            setIsFetchingActiveModel(false)
           }
-        } finally {
-          setIsFetchingActiveModel(false)
         }
+      } else {
+        const hasKey = Boolean(settings.providers.google?.hasApiKey)
+        setHasSavedGoogleKey(hasKey)
+        setIsAiConnected(hasKey)
       }
     } catch {
+      setIsAiConnected(false)
       /* bridge unavailable */
     }
   }, [])
 
   useEffect(() => {
     void loadAiProviderStatus()
+    const onFocus = () => void loadAiProviderStatus()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
   }, [loadAiProviderStatus])
 
   const openAiMenu = useCallback(async () => {
     setAiMenuError('')
     setShowAiKey(false)
+    setModelDropdownOpen(false)
+    setModelFilter('')
     setAiMenuOpen(true)
     try {
       const settings = await window.aiOfficeAi?.getSettings()
@@ -662,6 +706,7 @@ export function Home({
       })
       if (res?.ok && Array.isArray(res.models) && res.models.length > 0) {
         setAvailableModels(res.models)
+        setModelDropdownOpen(true)
         if (!aiModelId.trim() && res.models[0]) {
           setAiModelId(res.models[0])
         }
@@ -712,19 +757,29 @@ export function Home({
       if (aiChoice === 'custom') {
         setActiveModel(aiModelId.trim())
         setHasSavedKey(Boolean(hasSavedKey || aiKey.trim()))
+        if (endpoint) {
+          void window.aiOfficeAi
+            ?.fetchCustomModels?.()
+            .then((res) => {
+              if (res?.ok && Array.isArray(res.models) && res.models.length > 0) {
+                setAvailableModels(res.models)
+                setIsAiConnected(true)
+                if (!aiModelId.trim() && res.models[0]) {
+                  setActiveModel(res.models[0])
+                }
+              } else {
+                setIsAiConnected(false)
+              }
+            })
+            .catch(() => setIsAiConnected(false))
+        } else {
+          setIsAiConnected(false)
+        }
       } else {
+        const hasKey = Boolean(hasSavedGoogleKey || googleKey.trim())
         setActiveModel(googleModel.trim())
-        setHasSavedGoogleKey(Boolean(hasSavedGoogleKey || googleKey.trim()))
-      }
-      if (aiChoice === 'custom' && endpoint) {
-        void window.aiOfficeAi?.fetchCustomModels?.().then((res) => {
-          if (res?.ok && Array.isArray(res.models) && res.models.length > 0) {
-            setAvailableModels(res.models)
-            if (!aiModelId.trim() && res.models[0]) {
-              setActiveModel(res.models[0])
-            }
-          }
-        })
+        setHasSavedGoogleKey(hasKey)
+        setIsAiConnected(hasKey)
       }
     } catch (err) {
       setAiMenuError(err instanceof Error ? err.message : String(err))
@@ -1569,46 +1624,27 @@ export function Home({
                 <span>{t('openLocal')}</span>
               </button>
               <button
-                className={`open-file-button ai-provider-button${activeAiProvider === 'custom' ? ' is-custom' : ''}`}
+                className={`open-file-button ai-provider-button${isAiConnected ? ' is-connected' : ' is-disconnected'}`}
                 onClick={() => void openAiMenu()}
-                title={`${activeAiProvider === 'custom' ? t('aiMenuCustom') : t('aiMenuGoogle')}${
-                  activeModel ? `: ${activeModel}` : ''
-                }`}
+                title={`${activeModel || (activeAiProvider === 'custom' ? t('aiMenuCustom') : t('aiMenuGoogle'))} (${
+                  activeAiProvider === 'custom' ? t('aiMenuCustom') : t('aiMenuGoogle')
+                })`}
                 aria-label={t('aiMenuTitle')}
                 aria-haspopup="dialog"
                 aria-expanded={aiMenuOpen}
               >
-                {activeAiProvider === 'custom' ? (
-                  <>
-                    <span className="ai-provider-button-icon" aria-hidden="true">
-                      🔑
-                    </span>
-                    <span className="ai-provider-button-label">{t('aiMenuCustom')}</span>
-                    <span className="ai-provider-button-sep" aria-hidden="true">
-                      •
-                    </span>
-                    <span className="ai-provider-button-model" title={activeModel || undefined}>
-                      {isFetchingActiveModel && !activeModel ? '...' : activeModel || 'OpenAI'}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="ai-provider-button-icon ara" aria-hidden="true">
-                      ✦
-                    </span>
-                    <span className="ai-provider-button-label">{t('aiMenuGoogle')}</span>
-                    {activeModel && (
-                      <>
-                        <span className="ai-provider-button-sep" aria-hidden="true">
-                          •
-                        </span>
-                        <span className="ai-provider-button-model" title={activeModel}>
-                          {activeModel}
-                        </span>
-                      </>
-                    )}
-                  </>
-                )}
+                <span
+                  className={`ai-provider-button-dot ${isAiConnected ? 'connected' : 'disconnected'}`}
+                  aria-hidden="true"
+                />
+                <span className="ai-provider-button-model" title={activeModel || undefined}>
+                  {isFetchingActiveModel && !activeModel
+                    ? '...'
+                    : activeModel || (activeAiProvider === 'custom' ? 'OpenAI' : 'Gemini')}
+                </span>
+                <span className="ai-provider-button-chevron" aria-hidden="true">
+                  ▾
+                </span>
               </button>
             </div>
           </div>
@@ -2019,21 +2055,15 @@ export function Home({
             aria-labelledby="ai-menu-title"
             onClick={(event) => event.stopPropagation()}
           >
-            {/* Ambient Top Glow */}
-            <div className="ai-menu-ambient-glow" aria-hidden="true" />
-
             {/* Modal Header */}
             <div className="ai-menu-header">
               <div className="ai-menu-header-left">
-                <span className="ai-menu-eyebrow">
-                  <span className="ai-menu-spark" aria-hidden="true">
-                    ✦
-                  </span>
-                  ARAOFFICE AI
-                </span>
                 <h3 id="ai-menu-title" className="ai-menu-title">
                   {t('aiMenuTitle')}
                 </h3>
+                <p className="ai-menu-subtitle">
+                  {aiChoice === 'google' ? t('aiMenuGoogleDesc') : t('aiMenuCustomDesc')}
+                </p>
               </div>
               <button
                 type="button"
@@ -2058,297 +2088,317 @@ export function Home({
               </button>
             </div>
 
-            {/* Provider Option Tiles */}
-            <div className="ai-menu-options" role="radiogroup" aria-labelledby="ai-menu-title">
+            {/* Segmented Provider Tabs */}
+            <div className="ai-menu-segmented" role="tablist" aria-label={t('aiMenuTitle')}>
               <button
                 type="button"
-                role="radio"
-                aria-checked={aiChoice === 'google'}
-                className={`ai-menu-option${aiChoice === 'google' ? ' selected' : ''}`}
-                onClick={() => {
-                  setAiChoice('google')
-                  setAiMenuError('')
-                }}
-              >
-                <div className="ai-menu-option-top">
-                  <div className="ai-menu-opt-icon ai-menu-icon-ara" aria-hidden="true">
-                    ✦
-                  </div>
-                  <div className="ai-menu-opt-meta">
-                    <div className="ai-menu-opt-name-row">
-                      <strong>{t('aiMenuGoogle')}</strong>
-                    </div>
-                    <small>{t('aiMenuGoogleDesc')}</small>
-                  </div>
-                  <div
-                    className={`ai-menu-radio${aiChoice === 'google' ? ' checked' : ''}`}
-                    aria-hidden="true"
-                  />
-                </div>
-              </button>
-
-              <button
-                type="button"
-                role="radio"
-                aria-checked={aiChoice === 'custom'}
-                className={`ai-menu-option${aiChoice === 'custom' ? ' selected' : ''}`}
+                role="tab"
+                aria-selected={aiChoice === 'custom'}
+                className={`ai-menu-tab${aiChoice === 'custom' ? ' active' : ''}`}
                 onClick={() => {
                   setAiChoice('custom')
                   setAiMenuError('')
                 }}
               >
-                <div className="ai-menu-option-top">
-                  <div className="ai-menu-opt-icon ai-menu-icon-key" aria-hidden="true">
-                    🔑
-                  </div>
-                  <div className="ai-menu-opt-meta">
-                    <div className="ai-menu-opt-name-row">
-                      <strong>{t('aiMenuCustom')}</strong>
-                    </div>
-                    <small>{t('aiMenuCustomDesc')}</small>
-                  </div>
-                  <div
-                    className={`ai-menu-radio${aiChoice === 'custom' ? ' checked' : ''}`}
-                    aria-hidden="true"
-                  />
-                </div>
+                <span className="ai-menu-tab-icon" aria-hidden="true">
+                  ⚡
+                </span>
+                <span>{t('aiMenuCustom')}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={aiChoice === 'google'}
+                className={`ai-menu-tab${aiChoice === 'google' ? ' active' : ''}`}
+                onClick={() => {
+                  setAiChoice('google')
+                  setAiMenuError('')
+                }}
+              >
+                <span className="ai-menu-tab-icon ara" aria-hidden="true">
+                  ✦
+                </span>
+                <span>{t('aiMenuGoogle')}</span>
               </button>
             </div>
 
-            {/* Gemini (Google AI Studio) fields */}
+            {/* Google Gemini Panel */}
             {aiChoice === 'google' && (
               <div className="ai-menu-fields">
-                <div className="ai-menu-field-group">
-                  <label htmlFor="ai-menu-google-model">
-                    <span className="ai-field-label">
-                      <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <rect x="4" y="4" width="16" height="16" rx="2" />
-                        <rect x="9" y="9" width="6" height="6" />
-                      </svg>
+                <div className="ai-menu-field-block">
+                  <div className="ai-field-label-row">
+                    <label htmlFor="ai-menu-google-model" className="ai-field-label">
                       {t('aiMenuModelLabel')}
-                    </span>
-                    <select
-                      id="ai-menu-google-model"
-                      value={googleModel}
-                      onChange={(event) => setGoogleModel(event.target.value)}
+                    </label>
+                  </div>
+                  <select
+                    id="ai-menu-google-model"
+                    value={googleModel}
+                    onChange={(event) => setGoogleModel(event.target.value)}
+                  >
+                    {GEMINI_MODELS.map((model) => (
+                      <option key={model} value={model}>
+                        {model}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="ai-menu-field-block">
+                  <div className="ai-field-label-row">
+                    <label htmlFor="ai-menu-google-key" className="ai-field-label">
+                      {t('aiMenuKey')}
+                    </label>
+                    <button
+                      type="button"
+                      className="ai-menu-studio-link"
+                      onClick={() =>
+                        void window.aiOfficeWindow.openExternal(
+                          'https://aistudio.google.com/apikey',
+                        )
+                      }
+                      rel="noreferrer"
                     >
-                      {GEMINI_MODELS.map((model) => (
-                        <option key={model} value={model}>
-                          {model}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label htmlFor="ai-menu-google-key">
-                    <div className="ai-field-label-row">
-                      <span className="ai-field-label">
+                      {t('aiMenuStudioLink')} ↗
+                    </button>
+                  </div>
+                  <div className="ai-key-input-wrap">
+                    <input
+                      id="ai-menu-google-key"
+                      type={showAiKey ? 'text' : 'password'}
+                      autoComplete="off"
+                      value={googleKey}
+                      placeholder={
+                        hasSavedGoogleKey ? '•••••••••••••••••••• (leave blank to keep)' : 'AIza…'
+                      }
+                      onChange={(event) => setGoogleKey(event.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="ai-pwd-toggle"
+                      onClick={() => setShowAiKey(!showAiKey)}
+                      tabIndex={-1}
+                      aria-label={showAiKey ? 'Hide key' : 'Show key'}
+                    >
+                      {showAiKey ? (
                         <svg
-                          width="13"
-                          height="13"
+                          width="15"
+                          height="15"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
                           strokeWidth="2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          aria-hidden="true"
                         >
-                          <path d="M21 2l-2 2m-1.5 1.5L16 7l-1.5-1.5M16 7l-4 4-2-2-4 4 2 2-4 4 2 2 4-4z" />
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                          <line x1="1" y1="1" x2="23" y2="23" />
                         </svg>
-                        {t('aiMenuKey')}
-                      </span>
-                      {hasSavedGoogleKey && (
-                        <span
-                          className={`ai-key-status-badge ${googleKey ? 'replacing' : 'saved'}`}
+                      ) : (
+                        <svg
+                          width="15"
+                          height="15"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
                         >
-                          <span className="ai-key-status-dot" aria-hidden="true" />
-                          {googleKey ? t('aiMenuKeyReplacing') : t('aiMenuKeySaved')}
-                        </span>
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
                       )}
-                    </div>
-                    <div className="ai-key-input-wrap">
-                      <input
-                        id="ai-menu-google-key"
-                        type={showAiKey ? 'text' : 'password'}
-                        autoComplete="off"
-                        value={googleKey}
-                        placeholder={
-                          hasSavedGoogleKey ? '•••••••••••••••••••• (leave blank to keep)' : 'AIza…'
-                        }
-                        onChange={(event) => setGoogleKey(event.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className="ai-pwd-toggle"
-                        onClick={() => setShowAiKey(!showAiKey)}
-                        tabIndex={-1}
-                        aria-label={showAiKey ? 'Hide key' : 'Show key'}
-                      >
-                        {showAiKey ? (
-                          <svg
-                            width="15"
-                            height="15"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                            <line x1="1" y1="1" x2="23" y2="23" />
-                          </svg>
-                        ) : (
-                          <svg
-                            width="15"
-                            height="15"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z" />
-                            <circle cx="12" cy="12" r="3" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </label>
-                </div>
-                <div className="ai-menu-studio-note">
-                  <p className="ai-menu-hint">{t('aiMenuStudioNote')}</p>
-                  <button
-                    type="button"
-                    className="ai-menu-studio-link"
-                    onClick={() =>
-                      void window.aiOfficeWindow.openExternal('https://aistudio.google.com/apikey')
-                    }
-                    rel="noreferrer"
-                  >
-                    {t('aiMenuStudioLink')}
-                  </button>
+                    </button>
+                  </div>
+                  <small className="ai-menu-hint">
+                    {hasSavedGoogleKey && !googleKey ? t('aiMenuKeySavedHint') : t('aiMenuKeyHint')}
+                  </small>
                 </div>
               </div>
             )}
 
-            {/* Custom API Fields */}
+            {/* OpenAI-Compatible Panel */}
             {aiChoice === 'custom' && (
               <div className="ai-menu-fields">
-                <div className="ai-menu-presets">
-                  <span className="ai-field-label">{t('aiMenuPresets')}</span>
-                  <div className="ai-menu-preset-chips">
-                    {CUSTOM_ENDPOINT_PRESETS.map((preset) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        className="ai-menu-preset-chip"
-                        onClick={() => setAiEndpoint(preset.baseUrl)}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
+                <div className="ai-menu-field-block">
+                  <div className="ai-field-label-row">
+                    <label htmlFor="ai-menu-endpoint" className="ai-field-label">
+                      {t('aiMenuEndpoint')}
+                    </label>
+                    <div className="ai-menu-preset-chips">
+                      <span className="ai-presets-label">{t('aiMenuPresets')}:</span>
+                      {CUSTOM_ENDPOINT_PRESETS.map((preset) => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          className="ai-menu-preset-chip"
+                          onClick={() => setAiEndpoint(preset.baseUrl)}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <input
+                    id="ai-menu-endpoint"
+                    value={aiEndpoint}
+                    placeholder="https://api.openai.com/v1"
+                    onChange={(event) => setAiEndpoint(event.target.value)}
+                  />
+                </div>
+
+                <div className="ai-menu-field-block">
+                  <div className="ai-field-label-row">
+                    <label htmlFor="ai-menu-model" className="ai-field-label">
+                      {t('aiMenuModel')}
+                    </label>
+                    {availableModels.length > 0 && (
+                      <span className="ai-models-count-badge">
+                        {availableModels.length} {availableModels.length === 1 ? 'model' : 'models'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="ai-combobox-wrapper" ref={modelComboboxRef}>
+                    <div className="ai-combobox-input-wrap">
+                      <input
+                        id="ai-menu-model"
+                        className="ai-combobox-input"
+                        value={aiModelId}
+                        placeholder="gpt-4o-mini"
+                        autoComplete="off"
+                        onClick={() => {
+                          if (availableModels.length > 0) setModelDropdownOpen(true)
+                        }}
+                        onFocus={() => {
+                          if (availableModels.length > 0) setModelDropdownOpen(true)
+                        }}
+                        onChange={(event) => {
+                          setAiModelId(event.target.value)
+                        }}
+                      />
+                      <div className="ai-combobox-actions">
+                        <button
+                          type="button"
+                          className="ai-fetch-models-btn"
+                          onClick={() => void handleFetchModels()}
+                          disabled={isFetchingModels || !aiEndpoint.trim()}
+                          title={t('aiMenuFetchModels')}
+                        >
+                          {isFetchingModels ? (
+                            <>
+                              <span className="ai-fetch-spinner" aria-hidden="true" />
+                              <span>...</span>
+                            </>
+                          ) : (
+                            <span>{t('aiMenuFetchModels')}</span>
+                          )}
+                        </button>
+                        {availableModels.length > 0 && (
+                          <button
+                            type="button"
+                            className="ai-dropdown-arrow-btn"
+                            onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
+                            aria-label="Toggle model list"
+                          >
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              style={{
+                                transform: modelDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                                transition: 'transform 0.15s ease',
+                              }}
+                            >
+                              <path d="M6 9l6 6 6-6" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {modelDropdownOpen && availableModels.length > 0 && (
+                      <div className="ai-custom-dropdown-menu" role="listbox">
+                        {availableModels.length > 6 && (
+                          <div className="ai-dropdown-search-wrap">
+                            <svg
+                              className="ai-dropdown-search-icon"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <circle cx="11" cy="11" r="8" />
+                              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <input
+                              type="text"
+                              className="ai-dropdown-search"
+                              placeholder="Filter models..."
+                              value={modelFilter}
+                              onChange={(e) => setModelFilter(e.target.value)}
+                              autoFocus
+                            />
+                          </div>
+                        )}
+                        <div className="ai-dropdown-list">
+                          {filteredModels.length === 0 ? (
+                            <div className="ai-dropdown-empty">No matching models</div>
+                          ) : (
+                            filteredModels.map((m) => {
+                              const isSelected = m === aiModelId
+                              return (
+                                <div
+                                  key={m}
+                                  role="option"
+                                  aria-selected={isSelected}
+                                  className={`ai-dropdown-item${isSelected ? ' selected' : ''}`}
+                                  onClick={() => {
+                                    setAiModelId(m)
+                                    setModelDropdownOpen(false)
+                                    setModelFilter('')
+                                  }}
+                                >
+                                  <span className="ai-dropdown-item-name">{m}</span>
+                                  {isSelected && (
+                                    <svg
+                                      className="ai-dropdown-item-check"
+                                      width="13"
+                                      height="13"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2.5"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  )}
+                                </div>
+                              )
+                            })
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="ai-menu-field-group">
-                  <label htmlFor="ai-menu-endpoint">
-                    <span className="ai-field-label">
-                      <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                        <line x1="2" y1="12" x2="22" y2="12" />
-                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                      </svg>
-                      {t('aiMenuEndpoint')}
-                    </span>
-                    <input
-                      id="ai-menu-endpoint"
-                      value={aiEndpoint}
-                      placeholder="https://api.openai.com/v1"
-                      onChange={(event) => setAiEndpoint(event.target.value)}
-                    />
-                  </label>
-                  <label htmlFor="ai-menu-model">
-                    <div className="ai-field-label-row">
-                      <span className="ai-field-label">
-                        <svg
-                          width="13"
-                          height="13"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <rect x="4" y="4" width="16" height="16" rx="2" />
-                          <rect x="9" y="9" width="6" height="6" />
-                        </svg>
-                        {t('aiMenuModel')}
-                      </span>
-                      <button
-                        type="button"
-                        className="ai-fetch-models-link"
-                        onClick={() => void handleFetchModels()}
-                        disabled={isFetchingModels || !aiEndpoint.trim()}
-                        title={t('aiMenuFetchModels')}
-                      >
-                        {isFetchingModels ? '...' : t('aiMenuFetchModels')}
-                      </button>
-                    </div>
-                    <input
-                      id="ai-menu-model"
-                      list="ai-custom-models-list"
-                      value={aiModelId}
-                      placeholder="gpt-4o-mini"
-                      onChange={(event) => setAiModelId(event.target.value)}
-                    />
-                    <datalist id="ai-custom-models-list">
-                      {availableModels.map((m) => (
-                        <option key={m} value={m} />
-                      ))}
-                    </datalist>
-                  </label>
-                </div>
-                <label htmlFor="ai-menu-key">
+
+                <div className="ai-menu-field-block">
                   <div className="ai-field-label-row">
-                    <span className="ai-field-label">
-                      <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M21 2l-2 2m-1.5 1.5L16 7l-1.5-1.5M16 7l-4 4-2-2-4 4 2 2-4 4 2 2 4-4z" />
-                      </svg>
+                    <label htmlFor="ai-menu-key" className="ai-field-label">
                       {t('aiMenuKey')}
-                    </span>
+                    </label>
                     {hasSavedKey && (
                       <span className={`ai-key-status-badge ${aiKey ? 'replacing' : 'saved'}`}>
                         <span className="ai-key-status-dot" aria-hidden="true" />
@@ -2405,30 +2455,14 @@ export function Home({
                       )}
                     </button>
                   </div>
-                  <div className="ai-menu-hint-row">
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    <small className="ai-menu-hint">
-                      {hasSavedKey && !aiKey
-                        ? t('aiMenuKeySavedHint')
-                        : isLocalhostEndpoint(aiEndpoint)
-                          ? t('aiMenuKeyOptional')
-                          : t('aiMenuKeyHint')}
-                    </small>
-                  </div>
-                </label>
+                  <small className="ai-menu-hint">
+                    {hasSavedKey && !aiKey
+                      ? t('aiMenuKeySavedHint')
+                      : isLocalhostEndpoint(aiEndpoint)
+                        ? t('aiMenuKeyOptional')
+                        : t('aiMenuKeyHint')}
+                  </small>
+                </div>
               </div>
             )}
 
@@ -2455,7 +2489,14 @@ export function Home({
             )}
 
             {/* Modal Actions */}
-            <div className="modal-buttons ai-menu-actions">
+            <div className="ai-menu-actions">
+              <button
+                type="button"
+                className="ai-menu-cancel-btn"
+                onClick={() => setAiMenuOpen(false)}
+              >
+                {t('cancel')}
+              </button>
               <button
                 type="button"
                 className="btn btn-primary ai-menu-save-btn"

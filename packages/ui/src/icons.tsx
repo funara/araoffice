@@ -210,3 +210,47 @@ export function IconExternalLink(props: IconProps) {
     </Svg>
   )
 }
+
+export function IconSettings(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="8" cy="8" r="2.2" strokeWidth="1.2" />
+      <path
+        d="M13.2 9.5a1.1 1.1 0 0 0 .2 1.2l.04.04a1.3 1.3 0 0 1-1.9 1.9l-.04-.04a1.1 1.1 0 0 0-1.2-.2 1.1 1.1 0 0 0-.7 1v.1a1.3 1.3 0 0 1-2.6 0v-.1a1.1 1.1 0 0 0-.7-1 1.1 1.1 0 0 0-1.2.2l-.04.04a1.3 1.3 0 0 1-1.9-1.9l.04-.04a1.1 1.1 0 0 0 .2-1.2 1.1 1.1 0 0 0-1-.7h-.1a1.3 1.3 0 0 1 0-2.6h.1a1.1 1.1 0 0 0 1-.7 1.1 1.1 0 0 0-.2-1.2l-.04-.04a1.3 1.3 0 0 1 1.9-1.9l.04.04a1.1 1.1 0 0 0 1.2.2 1.1 1.1 0 0 0 .7-1v-.1a1.3 1.3 0 0 1 2.6 0v.1a1.1 1.1 0 0 0 .7 1 1.1 1.1 0 0 0 1.2-.2l.04-.04a1.3 1.3 0 0 1 1.9 1.9l-.04.04a1.1 1.1 0 0 0-.2 1.2 1.1 1.1 0 0 0 1 .7h.1a1.3 1.3 0 0 1 0 2.6h-.1a1.1 1.1 0 0 0-1 .7z"
+        strokeWidth="1.1"
+      />
+    </Svg>
+  )
+}
+
+export function IconFileText(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        d="M9.5 2H4a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6z"
+        strokeLinejoin="round"
+      />
+      <path d="M9.5 2v4.5H13.5" strokeLinejoin="round" />
+      <path d="M5.5 8.5h5M5.5 11h3" strokeWidth="1.1" />
+    </Svg>
+  )
+}
+
+export function IconPen(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m11.5 2.5 2 2L5 13H3v-2z" strokeLinejoin="round" />
+    </Svg>
+  )
+}
+
+export function IconBulb(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path
+        d="M6 12.5h4M6.8 14h2.4M5 6.5a3 3 0 1 1 5.2 2c-.6.6-1.2 1.3-1.2 2H7c0-.7-.6-1.4-1.2-2A3 3 0 0 1 5 6.5z"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  )
+}

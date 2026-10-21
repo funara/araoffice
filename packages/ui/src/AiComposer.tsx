@@ -30,6 +30,7 @@ export function AiComposer({
   sendIconEnabled,
   sendIconDisabled,
   authGate,
+  disclaimer,
   onChange,
   onSend,
   onStop,
@@ -59,6 +60,7 @@ export function AiComposer({
   /** pass a ref to focus the textarea from outside */
   readonly textareaRef?: React.RefObject<HTMLTextAreaElement | null> | undefined
   readonly authGate?: React.ReactNode
+  readonly disclaimer?: React.ReactNode | undefined
   readonly onChange: (next: string) => void
   readonly onSend: () => void
   readonly onStop: () => void
@@ -85,74 +87,77 @@ export function AiComposer({
   if (authGate) return <>{authGate}</>
 
   return (
-    <div className="ai-input-box">
-      {header}
-      <textarea
-        ref={ref}
-        disabled={disabled}
-        value={value}
-        placeholder={placeholder}
-        aria-label={ariaLabel}
-        rows={1}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+    <>
+      <div className="ai-input-box">
+        {header}
+        <textarea
+          ref={ref}
+          disabled={disabled}
+          value={value}
+          placeholder={placeholder}
+          aria-label={ariaLabel}
+          rows={1}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault()
+              if (canSend) onSend()
+            } else if (e.key === 'Escape' && busy) {
+              e.preventDefault()
+              onStop()
+            }
+          }}
+          onPaste={(e) => {
+            if (!onPasteFiles) return
+            const files = Array.from(e.clipboardData.files)
+            if (files.length === 0) return
             e.preventDefault()
-            if (canSend) onSend()
-          } else if (e.key === 'Escape' && busy) {
-            e.preventDefault()
-            onStop()
-          }
-        }}
-        onPaste={(e) => {
-          if (!onPasteFiles) return
-          const files = Array.from(e.clipboardData.files)
-          if (files.length === 0) return
-          e.preventDefault()
-          onPasteFiles(files)
-        }}
-      />
-      <div className="ai-input-footer">
-        {footerStart}
-        {!iconOnly && (
-          <span className="ai-input-hint" title={busy ? undefined : hintIdleTitle}>
-            {busy ? hintBusy : hintIdle}
-          </span>
-        )}
-        {/*
-          Holds the send button against the right edge. The hint alone cannot do
-          it: it renders only when !iconOnly (every app passes iconOnly), and each
-          app restates the footer/hint rules in its own stylesheet - so the
-          guarantee lives here, where no stylesheet can drop it.
-        */}
-        <span aria-hidden="true" style={{ flex: '1 1 0%', minWidth: 0 }} />
-        {busy ? (
-          <button
-            className="ai-send-btn ai-stop-btn"
-            onClick={onStop}
-            title={stopLabel}
-            aria-label={stopLabel}
-          >
-            {iconOnly ? (stopIcon ?? <IconStop size={20} />) : <IconStop size={20} />}
-            {!iconOnly && stopLabel}
-          </button>
-        ) : (
-          <button
-            className="ai-send-btn"
-            onClick={onSend}
-            disabled={!canSend}
-            title={sendLabel}
-            aria-label={sendLabel}
-          >
-            {iconOnly ? (
-              ((canSend ? sendIconEnabled : sendIconDisabled) ?? <IconArrowUp size={18} />)
-            ) : (
-              <IconSend size={16} />
-            )}
-            {!iconOnly && sendLabel}
-          </button>
-        )}
+            onPasteFiles(files)
+          }}
+        />
+        <div className="ai-input-footer">
+          {footerStart}
+          {!iconOnly && (
+            <span className="ai-input-hint" title={busy ? undefined : hintIdleTitle}>
+              {busy ? hintBusy : hintIdle}
+            </span>
+          )}
+          {/*
+            Holds the send button against the right edge. The hint alone cannot do
+            it: it renders only when !iconOnly (every app passes iconOnly), and each
+            app restates the footer/hint rules in its own stylesheet - so the
+            guarantee lives here, where no stylesheet can drop it.
+          */}
+          <span aria-hidden="true" style={{ flex: '1 1 0%', minWidth: 0 }} />
+          {busy ? (
+            <button
+              className="ai-send-btn ai-stop-btn"
+              onClick={onStop}
+              title={stopLabel}
+              aria-label={stopLabel}
+            >
+              {iconOnly ? (stopIcon ?? <IconStop size={20} />) : <IconStop size={20} />}
+              {!iconOnly && stopLabel}
+            </button>
+          ) : (
+            <button
+              className="ai-send-btn"
+              onClick={onSend}
+              disabled={!canSend}
+              title={sendLabel}
+              aria-label={sendLabel}
+            >
+              {iconOnly ? (
+                ((canSend ? sendIconEnabled : sendIconDisabled) ?? <IconArrowUp size={18} />)
+              ) : (
+                <IconSend size={16} />
+              )}
+              {!iconOnly && sendLabel}
+            </button>
+          )}
+        </div>
       </div>
-    </div>
+      {disclaimer && <p className="ai-composer-disclaimer">{disclaimer}</p>}
+    </>
   )
 }

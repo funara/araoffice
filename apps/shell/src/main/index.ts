@@ -1120,9 +1120,13 @@ function trustedHandle<Args extends unknown[], Result>(
 }
 
 function shellIconPath(): string {
-  // The app theme belongs to renderer chrome; the window icon follows the OS theme.
-  const followsSystemDark = nativeTheme.shouldUseDarkColorsForSystemIntegratedUI
-  const filename = followsSystemDark ? 'ARA_dark.png' : 'ARA_light.png'
+  if (process.platform === 'win32') {
+    const icoPath = app.isPackaged
+      ? join(process.resourcesPath, 'icon.ico')
+      : join(app.getAppPath(), 'build/icon.ico')
+    if (existsSync(icoPath)) return icoPath
+  }
+  const filename = 'araoffice-icon.png'
   return app.isPackaged
     ? join(process.resourcesPath, filename)
     : join(app.getAppPath(), '../../public', filename)
@@ -2473,7 +2477,7 @@ app.whenReady().then(async () => {
   }
 
   if (process.platform === 'win32') {
-    app.setAppUserModelId('com.araoffice.app')
+    app.setAppUserModelId(app.isPackaged ? 'com.araoffice.app' : process.execPath)
   }
   void installMainProcessProxy()
   app.setAccessibilitySupportEnabled(true)

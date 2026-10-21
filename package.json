@@ -2,7 +2,7 @@
   "name": "araoffice",
   "version": "0.1.0",
   "private": true,
-  "description": "AI-native office suite (docs, sheets, slides, pdf)",
+  "description": "AI-native office suite (docs, sheets, slides, pdfs, markdowns, diagrams)",
   "author": {
     "name": "Adhi Rahmadian",
     "url": "https://adhirahmadian.id"
@@ -24,6 +24,7 @@
     "format": "node tools/format-changed.mjs --write",
     "format:check": "node tools/format-changed.mjs --check",
     "lint": "eslint .",
+    "icons": "node tools/build-app-icon.mjs",
     "fixtures": "npm run fixtures -w @araoffice/docx-engine",
     "test": "npm run test -w @araoffice/i18n && npm run test -w @araoffice/electron-utils && npm run test -w @araoffice/docx-engine && npm run test -w @araoffice/file-parse && npm run test -w @araoffice/pptx-engine && npm run test -w @araoffice/pptx-render && npm run test -w @araoffice/ai-search && npm run test -w @araoffice/agent-core && npm run test -w @araoffice/ai-provider && npm run test -w @araoffice/project-store && npm run test -w @araoffice/docs && npm run test -w @araoffice/sheets && npm run test -w @araoffice/shell && npm run test -w @araoffice/slides && npm run test -w @araoffice/pdf && npm run test -w @araoffice/markdown && npm run test -w @araoffice/diagram",
     "typecheck": "npm run typecheck -w @araoffice/i18n && npm run typecheck -w @araoffice/electron-utils && npm run typecheck -w @araoffice/docx-engine && npm run typecheck -w @araoffice/file-parse && npm run typecheck -w @araoffice/pptx-engine && npm run typecheck -w @araoffice/pptx-render && npm run typecheck -w @araoffice/ai-search && npm run typecheck -w @araoffice/agent-core && npm run typecheck -w @araoffice/ai-provider && npm run typecheck -w @araoffice/project-store && npm run typecheck -w @araoffice/ui && npm run typecheck -w @araoffice/docs && npm run typecheck -w @araoffice/sheets && npm run typecheck -w @araoffice/shell && npm run typecheck -w @araoffice/slides && npm run typecheck -w @araoffice/pdf && npm run typecheck -w @araoffice/markdown && npm run typecheck -w @araoffice/diagram",

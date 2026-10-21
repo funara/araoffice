@@ -9,9 +9,12 @@ import {
   AiProcessCard,
   AiTypingIndicator,
   AiUnconfiguredCard,
+  AiWelcomeHub,
   extractThinking,
-  IconCopy,
+  IconBulb,
   IconCheck,
+  IconCopy,
+  IconFileText,
   IconNewChat,
   IconSidebarCollapse,
   Markdown,
@@ -302,21 +305,29 @@ export function AiPanel({
         {chat.length === 0 && (
           <div className="ai-chat-empty">
             {isReady ? (
-              <>
-                <div className="ai-chat-empty-title">{t('aiEmptyTitle')}</div>
-                <div className="ai-chat-empty-body">{t('aiEmptyBody')}</div>
-                <div className="ai-quick-actions">
-                  <button className="ai-quick-btn" onClick={() => send(t('aiQuickSummaryPrompt'))}>
-                    {t('aiQuickSummary')}
-                  </button>
-                  <button
-                    className="ai-quick-btn"
-                    onClick={() => send(t('aiQuickKeyPointsPrompt'))}
-                  >
-                    {t('aiQuickKeyPoints')}
-                  </button>
-                </div>
-              </>
+              <AiWelcomeHub
+                description={t('aiEmptyBody')}
+                contextBadge={{
+                  icon: <IconFileText size={12} />,
+                  label: `${api.fileName() || 'Document.pdf'} · ${api.pageCount()} pages`,
+                }}
+                cards={[
+                  {
+                    id: 'pdf-summary',
+                    icon: <IconFileText size={16} />,
+                    title: t('aiQuickSummary'),
+                    subtitle: t('aiQuickSummaryPrompt'),
+                    onClick: () => send(t('aiQuickSummaryPrompt')),
+                  },
+                  {
+                    id: 'pdf-key-points',
+                    icon: <IconBulb size={16} />,
+                    title: t('aiQuickKeyPoints'),
+                    subtitle: t('aiQuickKeyPointsPrompt'),
+                    onClick: () => send(t('aiQuickKeyPointsPrompt')),
+                  },
+                ]}
+              />
             ) : (
               <AiUnconfiguredCard onConfigure={() => void window.pdfApi?.configureAi?.()} />
             )}
@@ -398,6 +409,7 @@ export function AiPanel({
         <AiComposer
           authGate={undefined}
           disabled={!isReady}
+          disclaimer="ARA Assistant suggestions are advisory, it can make mistakes."
           value={prompt}
           busy={busy}
           ariaLabel={t('aiComposerPlaceholder')}

@@ -180,6 +180,14 @@ const config = {
       to: 'ARAOffice_light.png',
     },
     {
+      from: '../../public/araoffice-icon.png',
+      to: 'araoffice-icon.png',
+    },
+    {
+      from: 'build/icon.ico',
+      to: 'icon.ico',
+    },
+    {
       from: 'build/docx.ico',
       to: 'docx.ico',
     },
@@ -271,7 +279,7 @@ const config = {
   ],
   npmRebuild: false,
   mac: {
-    icon: '../../public/ARA_dark.png',
+    icon: '../../public/araoffice-icon.png',
     target: ['dmg', 'zip'],
     category: 'public.app-category.productivity',
     hardenedRuntime: true,
@@ -317,7 +325,7 @@ const config = {
     // require a Debian maintainer and homepage in the repo metadata.
     target: ['AppImage'],
     category: 'Office',
-    icon: '../../public/ARA_dark.png',
+    icon: '../../public/araoffice-icon.png',
     // mac and win name the binary from productName; linux instead derives it
     // from package.json "name", and "@araoffice/shell" sanitizes to the
     // invalid "@araofficeshell". Setting it explicitly also makes the

@@ -565,6 +565,210 @@ body.dark .expand-copilot::after,
   transform: translateY(1px) scale(0.985);
 }
 
+/* Unified Empty-State Welcome Hub (Parity with ARAStat & ARA Office) */
+.ai-welcome-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 380px;
+  margin: 8px auto 0;
+  padding: 10px 6px 20px;
+  box-sizing: border-box;
+}
+
+.ai-hub-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.ai-hub-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+  position: relative;
+}
+
+.ai-hub-app-icon-wrap {
+  animation: araAppIconFloat 3.8s ease-in-out infinite;
+  filter: drop-shadow(0 4px 12px color-mix(in srgb, var(--ara-accent) 40%, transparent));
+}
+
+.ai-hub-app-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  object-fit: contain;
+  display: block;
+}
+
+.ai-hub-mark-default {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: linear-gradient(145deg, #3478f6, #7859f7);
+  color: #fff;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--ara-accent) 30%, transparent);
+}
+
+@keyframes araAppIconFloat {
+  0% {
+    transform: translateY(0px) scale(1);
+    filter: drop-shadow(0 4px 12px color-mix(in srgb, var(--ara-accent) 25%, transparent));
+  }
+  50% {
+    transform: translateY(-3px) scale(1.025);
+    filter: drop-shadow(0 8px 20px color-mix(in srgb, var(--ara-accent) 45%, transparent));
+  }
+  100% {
+    transform: translateY(0px) scale(1);
+    filter: drop-shadow(0 4px 12px color-mix(in srgb, var(--ara-accent) 25%, transparent));
+  }
+}
+
+.ai-hub-title {
+  font-size: 15px;
+  font-weight: 750;
+  color: var(--ara-panel-text);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.ai-hub-desc {
+  font-size: 12px;
+  color: var(--ara-panel-muted);
+  line-height: 1.45;
+  max-width: 290px;
+  margin: 0;
+}
+
+.ai-hub-context-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--ara-layer-2, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--ara-border, rgba(255, 255, 255, 0.08));
+  color: var(--ara-panel-muted);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+.ai-hub-context-pill svg {
+  color: var(--ara-accent);
+  flex-shrink: 0;
+}
+
+.ai-quick-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.ai-quick-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 13px;
+  border-radius: 10px;
+  background: var(--ara-layer-1, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--ara-border, rgba(255, 255, 255, 0.08));
+  color: var(--ara-panel-text);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ai-quick-card:hover {
+  background: var(--ara-layer-2, rgba(255, 255, 255, 0.05));
+  border-color: color-mix(in srgb, var(--ara-accent) 60%, var(--ara-border));
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.09);
+}
+
+.ai-quick-card:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.ai-quick-card:focus-visible {
+  outline: 2px solid var(--ara-accent);
+  outline-offset: 2px;
+}
+
+.quick-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ara-accent) 12%, transparent);
+  color: var(--ara-accent);
+}
+
+.quick-card-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.quick-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.quick-card-title {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ara-panel-text);
+  line-height: 1.3;
+}
+
+.quick-card-sub {
+  font-size: 11px;
+  color: var(--ara-panel-muted);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-composer-disclaimer {
+  margin: 6px 0 0;
+  padding: 0 4px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--ara-panel-muted);
+  opacity: 0.82;
+}
+
 .ai-msg {
   font-size: 14px;
   line-height: 1.6;

@@ -3330,7 +3330,7 @@ export function createDocsWindow(openPath?: string): BrowserWindow {
         }),
     // packaged builds embed the icon (build/icon.icns|ico); dev needs the file path
     ...(isDev && process.platform !== 'darwin'
-      ? { icon: join(app.getAppPath(), '../../public/ARA_dark.png') }
+      ? { icon: join(app.getAppPath(), '../../public/araoffice-icon.png') }
       : {}),
     webPreferences: {
       preload: runtime.preloadPath,
@@ -3626,7 +3626,7 @@ export function startDocsStandalone(): void {
     setUiLang(normalizeLang(process.env.ARAOFFICE_LANG ?? app.getLocale()))
     // packaged builds get the Dock icon from icon.icns; dev shows Electron's default
     if (isDev && process.platform === 'darwin') {
-      app.dock?.setIcon(join(app.getAppPath(), '../../public/ARA_dark.png'))
+      app.dock?.setIcon(join(app.getAppPath(), '../../public/araoffice-icon.png'))
     }
     buildDocsMenu()
     createDocsWindow()

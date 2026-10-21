@@ -778,18 +778,26 @@ export function Onboarding({
                                   {t('onbAiModel')}
                                 </span>
                               </label>
-                              <input
-                                id="onb-ai-model"
-                                list="onb-custom-models-list"
-                                value={aiModelId}
-                                placeholder="gpt-4o-mini"
-                                onChange={(e) => setAiModelId(e.target.value)}
-                              />
-                              <datalist id="onb-custom-models-list">
-                                {availableModels.map((model) => (
-                                  <option key={model} value={model} />
-                                ))}
-                              </datalist>
+                              {availableModels.length > 0 ? (
+                                <select
+                                  id="onb-ai-model"
+                                  value={aiModelId}
+                                  onChange={(e) => setAiModelId(e.target.value)}
+                                >
+                                  {availableModels.map((model) => (
+                                    <option key={model} value={model}>
+                                      {model}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  id="onb-ai-model"
+                                  value={aiModelId}
+                                  placeholder="gpt-4o-mini"
+                                  onChange={(e) => setAiModelId(e.target.value)}
+                                />
+                              )}
                               <button
                                 type="button"
                                 className="onb-fetch-models-link"

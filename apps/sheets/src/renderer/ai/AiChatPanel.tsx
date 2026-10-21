@@ -9,13 +9,17 @@ import {
   AiSnapshotsPopover,
   AiTypingIndicator,
   AiUnconfiguredCard,
+  AiWelcomeHub,
   clampAiPanelWidth,
   extractThinking,
   IconAttach,
+  IconBulb,
   IconCheck,
   IconCopy,
+  IconFileText,
   IconNewChat,
   IconSidebarCollapse,
+  IconSparkles,
   IconUndo,
   Markdown,
   useAiReady,
@@ -531,36 +535,45 @@ export function AiChatPanel({
         {chat.length === 0 && historicChat.length === 0 && (
           <div className="ai-chat-empty">
             {isReady ? (
-              <>
-                <div className="ai-chat-empty-title">
-                  {t(hasContent ? 'aiEmptyTitle' : 'aiEmptyBuildTitle')}
-                </div>
-                <div className="ai-chat-empty-body">
-                  {t(hasContent ? 'aiEmptyBodyLine1' : 'aiEmptyBuildBody')}
-                </div>
-                <div className="ai-starter-list">
-                  {(hasContent
+              <AiWelcomeHub
+                description={t(hasContent ? 'aiEmptyBodyLine1' : 'aiEmptyBuildBody')}
+                contextBadge={{
+                  icon: <IconFileText size={12} />,
+                  label: hasContent
                     ? getLang() === 'id'
-                      ? AI_CONTENT_STARTERS_ID
-                      : AI_CONTENT_STARTERS_EN
+                      ? 'Lembar Berisi Data'
+                      : 'Active Sheet with Data'
                     : getLang() === 'id'
-                      ? AI_BUILD_STARTERS_ID
-                      : AI_BUILD_STARTERS_EN
-                  ).map(({ label, prompt: pText }) => (
-                    <button
-                      key={label}
-                      className="ai-starter"
-                      type="button"
-                      onClick={() => {
-                        onPromptChange(pText)
-                        inputRef.current?.focus()
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </>
+                      ? 'Lembar Kosong'
+                      : 'Blank Spreadsheet',
+                }}
+                cards={(hasContent
+                  ? getLang() === 'id'
+                    ? AI_CONTENT_STARTERS_ID
+                    : AI_CONTENT_STARTERS_EN
+                  : getLang() === 'id'
+                    ? AI_BUILD_STARTERS_ID
+                    : AI_BUILD_STARTERS_EN
+                )
+                  .slice(0, 3)
+                  .map(({ label, prompt: pText }, idx) => ({
+                    id: `sheet-starter-${idx}`,
+                    icon:
+                      idx === 0 ? (
+                        <IconFileText size={16} />
+                      ) : idx === 1 ? (
+                        <IconSparkles size={16} />
+                      ) : (
+                        <IconBulb size={16} />
+                      ),
+                    title: label,
+                    subtitle: pText.length > 58 ? `${pText.slice(0, 56)}…` : pText,
+                    onClick: () => {
+                      onPromptChange(pText)
+                      inputRef.current?.focus()
+                    },
+                  }))}
+              />
             ) : (
               <AiUnconfiguredCard onConfigure={() => void window.desktopApi?.configureAi?.()} />
             )}
@@ -707,6 +720,7 @@ export function AiChatPanel({
       <div className="ai-composer">
         {attachNotice && <div className="ai-attach-notice">{attachNotice}</div>}
         <AiComposer
+          disclaimer="ARA Assistant suggestions are advisory, it can make mistakes."
           header={
             attachments.length > 0 && (
               <div className="ai-attachments" onScroll={onAttachmentsScroll}>

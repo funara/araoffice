@@ -26,17 +26,21 @@ import { useI18n, t as tGlobal, aiLangDirective, type TFunc } from '../i18n/loca
 import {
   AiPanelHeader,
   AiPanelShell,
-  AraSpark,
   AiProcessCard,
   AiSnapshotsPopover,
   AiTypingIndicator,
   AiUnconfiguredCard,
+  AiWelcomeHub,
+  AraSpark,
   extractThinking,
   IconArrowUp,
   IconAttach,
+  IconBulb,
+  IconFileText,
   IconNewChat,
   IconRefresh,
   IconSidebarCollapseLeft,
+  IconSparkles,
   IconStop,
   Markdown,
   openExternalUrl,
@@ -1241,30 +1245,35 @@ export function AiPanel({
         {chat.length === 0 && historicChat.length === 0 && (
           <div className="ai-chat-empty">
             {isReady ? (
-              <>
-                <div className="ai-chat-empty-title">
-                  {t(deckEmpty ? 'aiEmptyGenTitle' : 'aiEmptyTitle')}
-                </div>
-                <div className="ai-chat-empty-body">
-                  {t(deckEmpty ? 'aiEmptyGenBody1' : 'aiEmptyBody1')}
-                  <br />
-                  {t(deckEmpty ? 'aiEmptyGenBody2' : 'aiEmptyBody2')}
-                </div>
-                <div className="ai-starter-list">
-                  {starterPrompts(t, deckEmpty ?? false).map((p) => (
-                    <button
-                      key={p}
-                      className="ai-starter"
-                      onClick={() => {
-                        setInput(p)
-                        inputRef.current?.focus()
-                      }}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </>
+              <AiWelcomeHub
+                description={
+                  deckEmpty
+                    ? `${t('aiEmptyGenBody1')} ${t('aiEmptyGenBody2')}`
+                    : `${t('aiEmptyBody1')} ${t('aiEmptyBody2')}`
+                }
+                contextBadge={{
+                  icon: <IconFileText size={12} />,
+                  label: deckEmpty
+                    ? t('ribbonLayoutBlank')
+                    : `${slides.length} slides · Slide ${current + 1}`,
+                }}
+                cards={starterPrompts(t, deckEmpty ?? false).map((p, idx) => ({
+                  id: `slides-starter-${idx}`,
+                  icon:
+                    idx === 0 ? (
+                      <IconFileText size={16} />
+                    ) : idx === 1 ? (
+                      <IconSparkles size={16} />
+                    ) : (
+                      <IconBulb size={16} />
+                    ),
+                  title: p,
+                  onClick: () => {
+                    setInput(p)
+                    inputRef.current?.focus()
+                  },
+                }))}
+              />
             ) : (
               <AiUnconfiguredCard onConfigure={() => void window.slidesApi?.configureAi?.()} />
             )}
@@ -1574,6 +1583,9 @@ export function AiPanel({
                   <IconArrowUp size={18} />
                 </button>
               )}
+            </div>
+            <div className="ai-composer-disclaimer">
+              ARA Assistant suggestions are advisory, it can make mistakes.
             </div>
           </div>
         </div>

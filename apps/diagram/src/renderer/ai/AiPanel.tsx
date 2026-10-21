@@ -11,9 +11,13 @@ import {
   AiSnapshotsPopover,
   AiTypingIndicator,
   AiUnconfiguredCard,
+  AiWelcomeHub,
   extractThinking,
-  IconCopy,
+  IconBulb,
   IconCheck,
+  IconCopy,
+  IconFileText,
+  IconSparkles,
   Markdown,
   useAiPanelWidth,
   useAiReady,
@@ -427,42 +431,54 @@ export function AiPanel({
         {chat.length === 0 && (
           <div className="ai-chat-empty">
             {isReady ? (
-              <>
-                <div className="ai-chat-empty-title">Describe a diagram, ARA draws it</div>
-                <div className="ai-chat-empty-body">Pick an example or type your own request.</div>
-                <div className="ai-starter-list">
-                  <button
-                    type="button"
-                    className="ai-starter"
-                    onClick={() => {
-                      setPrompt('Draw a simple flowchart')
-                      inputRef.current?.focus()
+              (() => {
+                const fileName = filePath
+                  ? filePath.replace(/\\/g, '/').split('/').pop() || 'Untitled'
+                  : 'Untitled'
+                const modeLabel = deps.getMode() === 'mermaid' ? 'Mermaid Code' : 'Draw.io Canvas'
+                return (
+                  <AiWelcomeHub
+                    description="Describe a diagram and ARA will draft the structure directly onto the canvas."
+                    contextBadge={{
+                      icon: <IconFileText size={12} />,
+                      label: `${fileName} · ${modeLabel}`,
+                      title: filePath ?? fileName,
                     }}
-                  >
-                    Draw a flowchart
-                  </button>
-                  <button
-                    type="button"
-                    className="ai-starter"
-                    onClick={() => {
-                      setPrompt('Make a simple org chart')
-                      inputRef.current?.focus()
-                    }}
-                  >
-                    Make an org chart
-                  </button>
-                  <button
-                    type="button"
-                    className="ai-starter"
-                    onClick={() => {
-                      setPrompt('Create a simple login sequence diagram')
-                      inputRef.current?.focus()
-                    }}
-                  >
-                    Create a sequence diagram
-                  </button>
-                </div>
-              </>
+                    cards={[
+                      {
+                        id: 'flowchart',
+                        icon: <IconSparkles size={16} />,
+                        title: 'Draw a flowchart',
+                        subtitle: 'Create a process flow with decision steps and branches',
+                        onClick: () => {
+                          setPrompt('Draw a simple flowchart')
+                          inputRef.current?.focus()
+                        },
+                      },
+                      {
+                        id: 'org-chart',
+                        icon: <IconBulb size={16} />,
+                        title: 'Make an org chart',
+                        subtitle: 'Hierarchical team structure with roles and departments',
+                        onClick: () => {
+                          setPrompt('Make a simple org chart')
+                          inputRef.current?.focus()
+                        },
+                      },
+                      {
+                        id: 'sequence-diag',
+                        icon: <IconFileText size={16} />,
+                        title: 'Create a sequence diagram',
+                        subtitle: 'Message interaction between services, users, and databases',
+                        onClick: () => {
+                          setPrompt('Create a simple login sequence diagram')
+                          inputRef.current?.focus()
+                        },
+                      },
+                    ]}
+                  />
+                )
+              })()
             ) : (
               <AiUnconfiguredCard onConfigure={() => void window.diagramApi?.configureAi?.()} />
             )}
@@ -521,6 +537,7 @@ export function AiPanel({
       <div className="ai-composer">
         <AiComposer
           disabled={!isReady}
+          disclaimer="ARA Assistant suggestions are advisory, it can make mistakes."
           textareaRef={inputRef}
           value={prompt}
           busy={busy}
