@@ -50,13 +50,15 @@ describe('atomicWriteFile', () => {
     expect(readdirSync(dir)).toEqual(['a.txt'])
   })
 
-  it('falls back to an in-place write when the rename stays locked', async () => {
+  it('keeps the original intact when every rename attempt stays locked', async () => {
     dir = mkdtempSync(join(tmpdir(), 'aw-utils-'))
     const target = join(dir, 'a.txt')
     writeFileSync(target, 'old')
     for (let i = 0; i < 5; i++) vi.mocked(rename).mockRejectedValueOnce(epermError())
-    await atomicWriteFile(target, Buffer.from('new'))
-    expect(readFileSync(target, 'utf-8')).toBe('new')
+    await expect(atomicWriteFile(target, Buffer.from('new'))).rejects.toMatchObject({
+      code: 'EPERM',
+    })
+    expect(readFileSync(target, 'utf-8')).toBe('old')
     expect(readdirSync(dir)).toEqual(['a.txt'])
   })
 })

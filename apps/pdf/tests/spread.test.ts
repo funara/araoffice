@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { rowOfVisIdx, spreadRows, stepPage } from '../src/renderer/spread'
+import { rowOfVisIdx, rowTopOffsets, spreadRows, stepPage } from '../src/renderer/spread'
 
 describe('spreadRows', () => {
   it('gives every page its own row in single mode', () => {
@@ -55,5 +55,14 @@ describe('rowOfVisIdx', () => {
     expect(rowOfVisIdx(2, 2)).toBe(1)
     expect(rowOfVisIdx(3, 2)).toBe(1)
     expect(rowOfVisIdx(4, 2)).toBe(2)
+  })
+})
+
+describe('rowTopOffsets', () => {
+  it('handles empty rows, mixed page sizes, spreads, and zoom', () => {
+    expect(rowTopOffsets([], 1, 20)).toEqual([])
+    const rows = spreadRows([0, 1, 2], 2)
+    const heights = rows.map((row) => (row.length === 2 ? 100 : 150))
+    expect(rowTopOffsets(heights, 2, 10)).toEqual([10, 220])
   })
 })

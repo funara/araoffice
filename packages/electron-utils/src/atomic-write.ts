@@ -32,8 +32,8 @@ export async function renameWithRetry(
 
 /**
  * Same-dir temp file + rename, so a crash mid-write can't truncate the target.
- * Rename-over-existing fails transiently on Windows under Defender/indexer
- * locks: retry with backoff, then fall back to an in-place write.
+ * Rename-over-existing can fail under Windows file locks; after retries the
+ * error is returned and the original target remains untouched.
  */
 export async function atomicWriteFile(filePath: string, data: Buffer | Uint8Array): Promise<void> {
   const tmp = join(
@@ -48,10 +48,6 @@ export async function atomicWriteFile(filePath: string, data: Buffer | Uint8Arra
       await unlink(tmp)
     } catch {
       /* tmp never created */
-    }
-    if (RETRYABLE_RENAME_CODES[(err as NodeJS.ErrnoException).code ?? '']) {
-      await writeFile(filePath, data)
-      return
     }
     throw err
   }

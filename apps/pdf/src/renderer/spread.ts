@@ -8,6 +8,17 @@ export function spreadRows(visList: number[], spread: 1 | 2): number[][] {
   return out
 }
 
+/** Cumulative row offsets from the top of the scroll surface. */
+export function rowTopOffsets(heights: readonly number[], scale: number, gap: number): number[] {
+  const offsets: number[] = []
+  let top = gap
+  for (const height of heights) {
+    offsets.push(top)
+    top += height * scale + gap
+  }
+  return offsets
+}
+
 /** Visible position → row index */
 export function rowOfVisIdx(visIdx: number, spread: 1 | 2): number {
   return spread === 1 ? visIdx : Math.floor(visIdx / 2)

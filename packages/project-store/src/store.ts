@@ -18,14 +18,18 @@
 import { createHash } from 'node:crypto'
 import {
   appendFileSync,
+  closeSync,
   existsSync,
+  fstatSync,
   mkdirSync,
+  openSync,
   readFileSync,
+  readSync,
   renameSync,
+  readdirSync,
   statSync,
   unlinkSync,
   writeFileSync,
-  readdirSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, sep } from 'node:path'
@@ -98,10 +102,6 @@ function writeJson(filePath: string, data: unknown): void {
         } catch {
           /* ignore unlink failure */
         }
-        if (RETRYABLE_RENAME_CODES[code]) {
-          writeFileSync(filePath, content, 'utf8')
-          return
-        }
         throw err
       }
       sleepSync(25 * 2 ** attempt)
@@ -115,6 +115,81 @@ const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/
 
 function validateId(kind: 'projectId' | 'chatId', id: string): void {
   if (!ID_PATTERN.test(id)) throw new Error(`Invalid ${kind}: ${JSON.stringify(id)}`)
+}
+
+function parseChatMessage(line: string | Buffer): ChatMessage | null {
+  try {
+    const message = JSON.parse(
+      typeof line === 'string' ? line : line.toString('utf8'),
+    ) as ChatMessage
+    if (
+      typeof message.seq === 'number' &&
+      typeof message.role === 'string' &&
+      typeof message.text === 'string'
+    ) {
+      return message
+    }
+  } catch {
+    // Skip malformed records, as the previous full-file reader did.
+  }
+  return null
+}
+
+function readAllChatMessages(filePath: string): ChatMessage[] {
+  const messages: ChatMessage[] = []
+  for (const line of readFileSync(filePath, 'utf8').split('\n')) {
+    const message = parseChatMessage(line)
+    if (message) messages.push(message)
+  }
+  return messages
+}
+
+function readExactlySync(fd: number, buffer: Buffer, position: number): void {
+  for (let offset = 0; offset < buffer.length;) {
+    const bytesRead = readSync(fd, buffer, offset, buffer.length - offset, position + offset)
+    if (bytesRead === 0) throw new Error('Unexpected end of chat history')
+    offset += bytesRead
+  }
+}
+
+// shortcut: finite reads trust append order matches seq order; scan all records if writers reorder JSONL.
+function readChatTail(filePath: string, limit: number): ChatMessage[] {
+  const fd = openSync(filePath, 'r')
+  try {
+    let position = fstatSync(fd).size
+    let partial: Buffer[] = []
+    const messages: ChatMessage[] = []
+    const concatInFileOrder = (first: Buffer | null) => {
+      const fragments = first ? [first] : []
+      for (let i = partial.length - 1; i >= 0; i--) {
+        const fragment = partial[i]
+        if (fragment) fragments.push(fragment)
+      }
+      return Buffer.concat(fragments)
+    }
+    while (position > 0 && messages.length < limit) {
+      const chunkLength = Math.min(8_192, position)
+      position -= chunkLength
+      const chunk = Buffer.allocUnsafe(chunkLength)
+      readExactlySync(fd, chunk, position)
+      let end = chunk.length
+      for (let i = chunk.length - 1; i >= 0 && messages.length < limit; i--) {
+        if (chunk[i] !== 0x0a) continue
+        const message = parseChatMessage(concatInFileOrder(chunk.subarray(i + 1, end)))
+        if (message) messages.push(message)
+        partial = []
+        end = i
+      }
+      if (end > 0 && messages.length < limit) partial.push(chunk.subarray(0, end))
+    }
+    if (position === 0 && messages.length < limit && partial.length) {
+      const message = parseChatMessage(concatInFileOrder(null))
+      if (message) messages.push(message)
+    }
+    return messages
+  } finally {
+    closeSync(fd)
+  }
 }
 
 /**
@@ -158,7 +233,7 @@ export class ProjectStore {
     return join(this.chatsDir(projectId), `${chatId}.jsonl`)
   }
 
-  // ── seq counters (in-memory cache, initialized from JSONL line count on first read) ──
+  // ── seq counters (in-memory cache, initialized from the JSONL tail on first append) ──
 
   /** baseDir:projectId:chatId → current max seq (shared across instances; see module-level seqCounters) */
   private seqKey(projectId: string, chatId: string): string {
@@ -173,12 +248,9 @@ export class ProjectStore {
       seqCounters.set(key, next)
       return next
     }
-    // Initialization: scan the existing file for the max seq. Uncapped: a chat
-    // over the default read limit would otherwise re-mint duplicate seq values
-    // after every restart.
-    const existing = this.loadChat(projectId, chatId, Infinity)
-    const maxSeq = existing.reduce((m, msg) => Math.max(m, msg.seq), -1)
-    const next = maxSeq + 1
+    // Appends are seq-ordered, so the last valid record has the current maximum.
+    const existing = this.loadChat(projectId, chatId, 1)
+    const next = (existing.at(-1)?.seq ?? -1) + 1
     seqCounters.set(key, next)
     return next
   }
@@ -399,21 +471,10 @@ export class ProjectStore {
     const messages: ChatMessage[] = [...pending]
     try {
       if (existsSync(filePath)) {
-        const raw = readFileSync(filePath, 'utf8')
-        const lines = raw.split('\n').filter((l) => l.trim())
-        for (const line of lines) {
-          try {
-            const msg = JSON.parse(line) as ChatMessage
-            if (
-              typeof msg.seq === 'number' &&
-              typeof msg.role === 'string' &&
-              typeof msg.text === 'string'
-            ) {
-              messages.push(msg)
-            }
-          } catch {
-            // skip bad lines
-          }
+        if (Number.isInteger(limit) && limit > 0) {
+          for (const message of readChatTail(filePath, limit)) messages.push(message)
+        } else {
+          for (const message of readAllChatMessages(filePath)) messages.push(message)
         }
       }
       // Sort by seq and take the most recent `limit` entries
@@ -469,24 +530,34 @@ export class ProjectStore {
     const oldPath = this.chatPath(fromProjectId, fromId)
     const newPath = this.chatPath(toProjectId, toId)
     let mergedMaxSeq: number | undefined
+    let didMove = false
     try {
       if (existsSync(oldPath)) {
         ensureDir(dirname(newPath))
         if (!existsSync(newPath)) {
           renameSync(oldPath, newPath)
+          didMove = true
         } else {
-          const existing = this.loadChat(toProjectId, toId, 10_000)
-          let seq = existing.reduce((m, msg) => Math.max(m, msg.seq), -1) + 1
-          const moved = this.loadChat(fromProjectId, fromId, 10_000)
+          const existing = [
+            ...(this.pendingFirstWrite.get(this.seqKey(toProjectId, toId)) ?? []),
+            ...readChatTail(newPath, 1),
+          ]
+          existing.sort((a, b) => a.seq - b.seq)
+          let seq = (existing.at(-1)?.seq ?? -1) + 1
+          const moved = readAllChatMessages(oldPath).sort((a, b) => a.seq - b.seq)
           const lines = moved.map((m) => JSON.stringify({ ...m, seq: seq++ }) + '\n').join('')
           if (lines) appendFileSync(newPath, lines, 'utf8')
           unlinkSync(oldPath)
           mergedMaxSeq = seq - 1
+          didMove = true
         }
       }
     } catch (err) {
       console.warn('[project-store] rebindChat rename failed:', err)
+      seqCounters.delete(this.seqKey(toProjectId, toId))
+      return
     }
+    if (!didMove) return
 
     // Migrate the seq counter (when merged, the renumbered max seq wins)
     const oldKey = this.seqKey(fromProjectId, fromId)

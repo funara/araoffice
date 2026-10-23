@@ -21,7 +21,7 @@ import { DRAW_COLORS, DrawLayer, cssRgb } from './DrawLayer'
 import type { DrawTool, LocalDrawing } from './DrawLayer'
 import { FormLayer } from './FormLayer'
 import { navAction } from './keyNav'
-import { rowOfVisIdx, spreadRows, stepPage } from './spread'
+import { rowOfVisIdx, rowTopOffsets, spreadRows, stepPage } from './spread'
 import { hasUnsavedEdits } from './dirty'
 import { LinkLayer } from './LinkLayer'
 import { OutlinePanel } from './OutlinePanel'
@@ -1416,15 +1416,16 @@ export default function App() {
     return () => ro.disconnect()
   }, [status, recomputeFit])
 
-  /** Cumulative row-top offset (with gaps), shared by scroll positioning and current-page calc */
-  const rowTop = useCallback(
-    (rowIdx: number) => {
-      let y = PAGE_GAP
-      for (let i = 0; i < rowIdx; i++) y += rowSize(rows[i]!).height * scale + PAGE_GAP
-      return y
-    },
+  const rowTops = useMemo(
+    () =>
+      rowTopOffsets(
+        rows.map((row) => rowSize(row).height),
+        scale,
+        PAGE_GAP,
+      ),
     [rows, rowSize, scale],
   )
+  const rowTop = useCallback((rowIdx: number) => rowTops[rowIdx] ?? PAGE_GAP, [rowTops])
 
   /** Page-top offset of a visible position (used for search positioning) */
   const pageTop = useCallback((visIdx: number) => rowTop(rowOfVis(visIdx)), [rowTop, rowOfVis])

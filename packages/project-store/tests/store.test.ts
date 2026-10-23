@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { existsSync, mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -134,11 +134,16 @@ describe('appendChatMessage + loadChat', () => {
     expect(msgs[2].seq).toBe(2)
   })
 
-  it('seq survives a store restart even with more messages than the read limit', () => {
-    for (let i = 0; i < 250; i++) {
-      store.appendChatMessage('default', 'chatLimit', { role: 'user', text: `m${i}` })
-    }
-    // A fresh instance re-initializes the seq counter from the file (default limit 200).
+  it('seq survives a store restart with more messages than the read limit', () => {
+    const chatsDir = join(tmpDir, 'projects', 'default', 'chats')
+    mkdirSync(chatsDir, { recursive: true })
+    writeFileSync(
+      join(chatsDir, 'chatLimit.jsonl'),
+      `${Array.from({ length: 250 }, (_, seq) =>
+        JSON.stringify({ seq, ts: '', role: 'user', text: `m${seq}` }),
+      ).join('\n')}\n`,
+      'utf8',
+    )
     const store2 = new ProjectStore(tmpDir)
     store2.appendChatMessage('default', 'chatLimit', { role: 'user', text: 'm250' })
     const msgs = store2.loadChat('default', 'chatLimit', Infinity)
@@ -161,14 +166,46 @@ describe('appendChatMessage + loadChat', () => {
     expect(msgs[0].tools?.[0].name).toBe('write_file')
   })
 
-  it('limit parameter: returns only the most recent N messages', () => {
-    for (let i = 0; i < 10; i++) {
-      store.appendChatMessage('default', 'chatLimit', { role: 'user', text: `msg${i}` })
-    }
-    const msgs = store.loadChat('default', 'chatLimit', 3)
-    expect(msgs).toHaveLength(3)
-    expect(msgs[0].text).toBe('msg7')
-    expect(msgs[2].text).toBe('msg9')
+  it('limit parameter: returns the most recent valid messages across UTF-8 chunk boundaries', () => {
+    const chatsDir = join(tmpDir, 'projects', 'default', 'chats')
+    mkdirSync(chatsDir, { recursive: true })
+    const longText = '🧪'.repeat(4_096)
+    writeFileSync(
+      join(chatsDir, 'chatLimit.jsonl'),
+      [
+        JSON.stringify({ seq: 0, ts: '', role: 'user', text: 'older' }),
+        JSON.stringify({ seq: 1, ts: '', role: 'assistant', text: longText }),
+        '{invalid json',
+        JSON.stringify({ seq: 2, ts: '', role: 'user', text: 'newest' }),
+      ].join('\n'),
+      'utf8',
+    )
+    const msgs = store.loadChat('default', 'chatLimit', 2)
+    expect(msgs.map((message) => message.seq)).toEqual([1, 2])
+    expect(msgs[0].text).toBe(longText)
+    expect(msgs[1].text).toBe('newest')
+  })
+
+  it('loads full histories larger than the argument-count limit', () => {
+    const chatsDir = join(tmpDir, 'projects', 'default', 'chats')
+    mkdirSync(chatsDir, { recursive: true })
+    const messageCount = 150_000
+    writeFileSync(
+      join(chatsDir, 'largeHistory.jsonl'),
+      `${Array.from({ length: messageCount }, (_, seq) =>
+        JSON.stringify({ seq, ts: '', role: 'user', text: '' }),
+      ).join('\n')}\n`,
+      'utf8',
+    )
+
+    const messages = store.loadChat('default', 'largeHistory', Infinity)
+    expect(messages).toHaveLength(messageCount)
+    expect(messages[0].seq).toBe(0)
+    expect(messages.at(-1)!.seq).toBe(messageCount - 1)
+    const finite = store.loadChat('default', 'largeHistory', messageCount)
+    expect(finite).toHaveLength(messageCount)
+    expect(finite[0].seq).toBe(0)
+    expect(finite.at(-1)!.seq).toBe(messageCount - 1)
   })
 
   it('nonexistent chat returns an empty array', () => {
@@ -300,6 +337,55 @@ describe('rebindChat', () => {
 
     store.appendChatMessage('default', newId, { role: 'assistant', text: 'after' })
     expect(store.loadChat('default', newId).map((m) => m.seq)).toEqual([0, 1, 2, 3])
+  })
+
+  it('keeps the source chat when persisting a merge fails', () => {
+    const chatsDir = join(tmpDir, 'projects', 'default', 'chats')
+    mkdirSync(chatsDir, { recursive: true })
+    const sourcePath = join(chatsDir, 'unsaved-failed.jsonl')
+    writeFileSync(
+      sourcePath,
+      `${JSON.stringify({ seq: 0, ts: '', role: 'user', text: 'keep me' })}\n`,
+      'utf8',
+    )
+    mkdirSync(join(chatsDir, 'merge-target.jsonl'))
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      store.rebindChat('default', 'unsaved-failed', 'merge-target')
+    } finally {
+      warn.mockRestore()
+    }
+    expect(existsSync(sourcePath)).toBe(true)
+  })
+
+  it('merges every source message when history exceeds 10,000', () => {
+    const newId = ProjectStore.chatIdForFile('/home/user/large-existing.docx')
+    store.appendChatMessage('default', newId, { role: 'user', text: 'old-0' })
+    store.appendChatMessage('default', newId, { role: 'assistant', text: 'old-1' })
+    const sourcePath = join(tmpDir, 'projects', 'default', 'chats', 'unsaved-large.jsonl')
+    writeFileSync(
+      sourcePath,
+      `${Array.from({ length: 10_001 }, (_, seq) =>
+        JSON.stringify({
+          seq,
+          ts: '',
+          role: seq % 2 === 0 ? 'user' : 'assistant',
+          text: `source-${seq}`,
+        }),
+      ).join('\n')}\n`,
+      'utf8',
+    )
+
+    store.rebindChat('default', 'unsaved-large', newId)
+
+    const messages = store.loadChat('default', newId, Infinity)
+    expect(messages).toHaveLength(10_003)
+    expect(messages[2].text).toBe('source-0')
+    expect(messages.at(-1)!.text).toBe('source-10000')
+    expect(messages.map((message) => message.seq)).toEqual(
+      Array.from({ length: 10_003 }, (_, seq) => seq),
+    )
+    expect(existsSync(sourcePath)).toBe(false)
   })
 })
 
