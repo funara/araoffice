@@ -8,14 +8,12 @@ import { HOME_CHANNELS } from '../shared/home-api'
 import { readAppSettings, writeAppSetting } from './app-settings'
 import { araGithubOwner, araGithubRepo } from './service-config'
 /**
- * Full-package auto-update over the generic provider (Azure CDN).
+ * Full-package auto-update using the provider packaged by electron-builder.
  *
- * The release pipeline publishes `latest.yml` + the versioned installer to
- * the update channel prefix (production builds only). The packaged app reads
- * that URL from resources/app-update.yml, which electron-builder bakes in
- * from the `publish` config in apps/shell/electron-builder.cjs — the URL
- * itself is injected at build time via the ARAOFFICE_UPDATE_URL env var and
- * is intentionally not committed to the repo.
+ * Builds default to the GitHub repository configured for the app. ARAOFFICE_UPDATE_URL
+ * optionally selects a generic static feed. electron-builder writes the
+ * provider to resources/app-update.yml and generates the platform update
+ * metadata files alongside the installer artifacts.
  *
  * UX lives in the shell renderer's modal cards (ChangelogModal / UpdateRestartModal);
  * update state broadcasts to every WebContentsView over HOME_CHANNELS.updateStateChanged.

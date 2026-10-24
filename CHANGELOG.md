@@ -8,28 +8,30 @@ The release note format below (`###` headings, `- **NEW**:`, `- **FIX**:`, `**bo
 
 ## [0.1.0] — 2026-10-20
 
-Major release of **ARAOffice** — fully transitioning to a 100% offline, privacy-first, pure open-source desktop office suite with an integrated client-direct AI copilot (**ARA Assistant**).
+Initial release of **ARAOffice**, a local-first desktop office suite with six editors and an optional AI assistant.
 
-### Core Platform & Privacy
+### Unified Workspace
 
-- **NEW**: **100% Offline-First & Zero Cloud** — Completely eliminated cloud dependencies, user sign-in requirements, telemetry, and background tracking. The office suite launches instantly and operates entirely offline.
-- **NEW**: **Client-Direct AI Provider Engine** — Direct client connection to **Google Gemini** (via Google AI Studio) and any **OpenAI-compatible** endpoint (including local **Ollama** and **LM Studio**). API keys are stored solely in local `ai-settings.json` on the user's machine and are never transmitted over telemetry.
-- **NEW**: **ARA Assistant Persona & Copilot** — Unified AI persona across all six editors with multi-step tool execution, undo snapshot timelines, and context-aware assistance.
+- **NEW**: **One workspace for six editors** — Open Docs, Sheets, Slides, PDF, Notes, and Diagrams in a shared desktop shell with tabs, a launcher, and recent files.
+- **NEW**: **Command Center (`Ctrl+K` / `⌘K`)** — Find actions, describe a task, and draft content for supported editors from one search bar.
+- **NEW**: **Cross-editor handoff** — Send supported AI drafts from the Command Center into an editor to continue working on them.
 
-### Omnibar & Workspace Orchestration
+### Six Editors
 
-- **NEW**: **Command Center Omnibar (`Ctrl+K` / `⌘K`)** — Global intent detection and drafting. Ask to outline a proposal, analyze numbers, build presentation slides, or design an architecture diagram, and ARA Assistant drafts the artifact directly in chat.
-- **NEW**: **1-Click Editor Handover** — Seamlessly transfer agreed drafts into target editors (`Open in Docs & Write`, `Open in Sheets & Write`, `Open in Diagram & Write`) with automated Mermaid syntax detection and document creation.
-- **NEW**: **Indonesian Handover Routing** — The Command Center understands Indonesian creation verbs and artifact nouns when routing handover cards.
+- **NEW**: **Docs** — Create and edit DOCX documents with pagination, comments, tracked changes, and targeted paragraph saves.
+- **NEW**: **Sheets** — Work with XLSX spreadsheets, formulas, charts, and pivot tables, supported by a native Rust calculation engine.
+- **NEW**: **Slides** — Edit PPTX presentations with slide layouts, themes, speaker notes, and visual design tools.
+- **NEW**: **PDF** — Annotate and fill documents, reorganize pages, merge or split files, and extract embedded images.
+- **NEW**: **Notes** — Write Markdown with live preview, GitHub-flavored Markdown, an outline, and DOCX/HTML export.
+- **NEW**: **Diagrams** — Create diagrams on a Draw.io canvas or write Mermaid diagrams with automatic layout.
 
-### Document Editors & Toolkits
+### Optional ARA Assistant
 
-- **NEW**: **PDF Document Toolkit** — Split, combine, and reorder PDF pages; extract embedded images to disk; sanitize documents (remove metadata) with a keyboard-friendly dialog; batch-delete annotations; write nested outlines; export text.
-- **NEW**: **PDF Comments & Accessibility** — Comments panel with annotation management, squiggly underline markup, automated accessibility report checker, and outline tree renaming.
-- **NEW**: **Docs Typography & Pagination Overhaul** — Real font metrics and UAX#14 break rules drive pagination with Word-parity visual rendering, tracked changes, comments, and paragraph byte patching.
-- **NEW**: **Markdown Local Images & Diagram JPEG Export** — ARA Notes resolves local image assets through one-time per-window tickets; ARA Diagrams gains JPEG export alongside PNG.
-- **NEW**: **Diagram Dual-Engine Editor** — Full-featured editor supporting interactive Draw.io visual canvases and live Mermaid.js code rendering with automatic hierarchical layouts.
-- **FIX**: **Docs Canvas Centering** — Smoothly recentres the document canvas upon AI dock toggling without layout shifts or visual jitter.
-- **FIX**: **Fork-Safe Environment Defaults** — Service URLs, update feeds, and branding resolve safely from environment with safe offline defaults.
+- **NEW**: **In-editor AI assistance** — Ask for help with document text, spreadsheet formulas, presentations, PDFs, Markdown, and diagrams.
+- **NEW**: **Choose your AI endpoint** — Connect Google Gemini or an OpenAI-compatible service, including local Ollama and LM Studio models. AI requests go directly from the app to the endpoint you configure.
 
----
+### Local-First by Design
+
+- **NEW**: **Work without an account** — Core editing is designed to work offline; ARAOffice has no sign-in or telemetry service.
+- **NEW**: **Keep control of AI data** — AI is optional. When used, prompts and selected document context are sent to the provider you configured; external providers have their own data policies.
+- **NEW**: **Desktop update support** — Windows and macOS builds can check for GitHub Releases updates. Linux builds provide a manual download link.

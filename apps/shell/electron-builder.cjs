@@ -1,26 +1,20 @@
 /**
- * electron-builder configuration (moved out of package.json "build" so the
- * update feed can be injected at build time instead of living in the repo).
+ * electron-builder configuration (kept separate from package.json so the
+ * release provider and runtime environment can be resolved at build time).
  *
- * Update feed (two modes):
- * - ARAOFFICE_UPDATE_URL set  -> generic provider, URL prefix serving
- *   latest.yml / latest-mac.yml (CDN). CI provides it as a secret; local
- *   builds use apps/shell/electron-builder.env (gitignored, auto-loaded by
- *   the CLI — keep its ARA_GITHUB_* in sync with the root .env private
- *   section; that file is the single source of truth).
- * - ARAOFFICE_UPDATE_URL unset -> GitHub provider from ARA_GITHUB_OWNER /
- *   ARA_GITHUB_REPO (same vars the app reads at runtime for the changelog
- *   + manual-download + issues links; private .env, gitignored). Empty =
- *   no publish config: electron-builder bakes no app-update.yml and in-app
- *   auto-update stays disabled (fork-safe open-source default).
+ * Update feed:
+ * - ARAOFFICE_UPDATE_URL set -> generic provider for a static feed serving
+ *   latest.yml / latest-mac.yml (for example, a CDN).
+ * - Otherwise use GitHub Releases, defaulting to funara/araoffice. The
+ *   ARA_GITHUB_OWNER / ARA_GITHUB_REPO environment or .env values can override it.
  */
 
 const { existsSync, mkdirSync, readFileSync, writeFileSync } = require('node:fs')
 const { dirname, join } = require('node:path')
 
 const updateUrl = process.env.ARAOFFICE_UPDATE_URL || sourceEnvValue('ARAOFFICE_UPDATE_URL')
-const githubOwner = process.env.ARA_GITHUB_OWNER || sourceEnvValue('ARA_GITHUB_OWNER')
-const githubRepo = process.env.ARA_GITHUB_REPO || sourceEnvValue('ARA_GITHUB_REPO')
+const githubOwner = process.env.ARA_GITHUB_OWNER || sourceEnvValue('ARA_GITHUB_OWNER') || 'funara'
+const githubRepo = process.env.ARA_GITHUB_REPO || sourceEnvValue('ARA_GITHUB_REPO') || 'araoffice'
 /** One value from the repo-root private .env (build-time identity fallback); undefined when missing. */
 function sourceEnvValue(key) {
   const source = join(__dirname, '../../.env')
@@ -383,10 +377,8 @@ if (updateUrl) {
       channel: 'latest',
     },
   ]
-} else if (githubOwner && githubRepo) {
-  // Private-release default: serve latest.yml from GitHub Releases
-  // (e.g. <owner>/<app>-release). Forks without these vars get no
-  // publish config and ship with auto-update disabled.
+} else {
+  // Generate updater metadata for the configured GitHub Releases repository.
   config.publish = [
     {
       provider: 'github',
@@ -396,8 +388,4 @@ if (updateUrl) {
     },
   ]
 }
-// When neither is set (forks, PR smoke builds, plain local packaging)
-// publish is omitted: electron-builder bakes no app-update.yml into the
-// app and in-app auto-update stays disabled.
-
 module.exports = config

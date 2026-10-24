@@ -100,7 +100,7 @@ npm run native:build -w @araoffice/sheets   # cargo build --release
 npm run gate -w @araoffice/sheets           # typecheck + fixtures + test + compat
 ```
 
-Packaging (needs `build:all` output + `ARAOFFICE_UPDATE_URL` for updates; unsigned without signing creds):
+Packaging (uses the codebase GitHub Releases default; `ARAOFFICE_UPDATE_URL` optionally selects a generic update feed; unsigned without signing creds):
 
 ```bash
 npm run dist:win
